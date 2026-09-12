@@ -1,0 +1,1426 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141619"><title>斗鱼弹幕台</title>
+<style>
+:root{color-scheme:dark;--bg:#101114;--surface:#141619;--card:#1e2025;--soft:#ffffff05;--line:#ffffff12;--text:#f0f0f2;--muted:#9498a3;--nick:#afb3bf;--red:#ff7584;--tint:#ff75840c;--edge:#ff758441;--gift:#efc487;--gift-bg:#eeb6720b;--green:#8bceaf;--input:#17191e;--shadow:#0006;--fo-text:#f5ead2;--fo-muted:#c1b28e;--fo-nick:#d7c9a7;--fo-red:#ff8b96;--fo-accent:#dfbc6f33;--fo-border:#a88d4a88;--fo-wash:#d9bb6620;--fo-wash2:#d9bb660a;--fo-bg:#1c1b18;--content-size:14px;--nick-size:max(10px,calc(var(--content-size)*.8));--row-pad:calc((var(--content-size) - 10px)*.35);--row-gap:calc((var(--content-size) - 10px)*.7);--row-pad-strong:calc((var(--content-size) - 10px)*.85);--row-gap-strong:calc((var(--content-size) - 10px)*1.2);font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-synthesis:none}
+:root[data-theme=light]{color-scheme:light;--bg:#eeeff2;--surface:#fafafb;--card:#fff;--soft:#14161903;--line:#20263012;--text:#25262b;--muted:#70747f;--nick:#646875;--red:#b82940;--tint:#b8294008;--edge:#b829402c;--gift:#885416;--gift-bg:#ad75230a;--green:#347153;--input:#fff;--shadow:#1b203018;--fo-text:#3b3116;--fo-muted:#7a6a44;--fo-nick:#6a5a2e;--fo-red:#9b4a22;--fo-accent:#b8922e38;--fo-border:#c1a24f7a;--fo-wash:#d9bb6633;--fo-wash2:#d9bb6614;--fo-bg:#fdf8ea}
+*{box-sizing:border-box}html,body{margin:0;width:100%;height:100%;overflow:hidden}body{background:var(--bg);color:var(--text);font-size:14px;line-height:1.5;-webkit-tap-highlight-color:transparent}button,input,select{font:inherit}button{border:0;background:none;color:inherit;cursor:pointer;touch-action:manipulation}button:disabled{cursor:default;opacity:.6}button:focus-visible,input:focus-visible,select:focus-visible,summary:focus-visible{outline:2px solid var(--red);outline-offset:3px}svg{width:20px;height:20px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linecap:round;stroke-linejoin:round;pointer-events:none}h1,h2,h3,p{margin:0}[hidden]{display:none!important}a{color:var(--red)}input,select{height:45px;border:1px solid var(--line);border-radius:10px;width:100%;min-width:0;background:var(--input);color:var(--text);padding:0 12px;font-size:16px}input::placeholder{color:var(--muted)}input[readonly]{font-size:12px}input[type=number]{font-variant-numeric:tabular-nums}
+.app{max-width:820px;width:100%;height:100vh;height:100dvh;margin:auto;background:var(--surface);display:flex;flex-direction:column;overflow:hidden;position:relative;padding-top:env(safe-area-inset-top);padding-bottom:env(safe-area-inset-bottom)}.topbar{display:flex;gap:6px;align-items:center;flex:none;padding:8px 12px 4px;min-height:54px}.room-button{flex:1;min-width:0;text-align:left;padding:0 2px}.room-name{display:flex;gap:5px;align-items:center;font-size:15px;font-weight:600;line-height:1.4}.room-name span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.room-name svg{width:12px;height:12px;color:var(--muted);flex:none}.room-sub{display:flex;align-items:center;gap:5px;margin-top:2px;font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden}.room-caption{overflow:hidden;text-overflow:ellipsis}.status-dot{width:5px;height:5px;flex:none;border-radius:50%;background:var(--muted)}.status-dot.connected{background:var(--green)}.status-dot.reconnecting,.status-dot.error{background:var(--red)}.icon-button{height:44px;width:44px;flex:none;display:grid;place-items:center;border-radius:11px;color:var(--muted)}.icon-button:hover{background:var(--soft);color:var(--text)}.tabs{display:flex;align-items:stretch;gap:16px;padding:0 16px;flex:none;height:44px;border-bottom:1px solid var(--line)}.tab{font-size:16px;position:relative;padding:0 1px;color:var(--muted);min-width:44px}.tab[aria-selected=true]{color:var(--text);font-weight:700}.tab[aria-selected=true]::after{content:"";height:3px;position:absolute;bottom:0;left:calc(50% - 9px);width:18px;background:var(--red);border-radius:2px}.tabs-caption{margin-left:auto;align-self:center;font-size:10px;color:var(--muted);white-space:nowrap}.transport-alert{flex:none;padding:6px 14px;font-size:11px;color:var(--red);background:var(--tint)}
+.page{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}.priority{flex:none;min-height:0;max-height:65%;overflow-y:auto;overscroll-behavior-y:contain;overflow-anchor:none;scrollbar-width:thin;scrollbar-color:var(--line) transparent}.priority:not(:empty){padding:7px 0 8px;background:var(--soft);border-bottom:1px solid var(--line)}.priority-list{padding:0 12px}.priority-section+.priority-section{margin-top:9px}.gift-list{min-width:0}.compact-row{position:relative;min-width:0;margin:0;border:1px solid var(--line);border-radius:3px;padding:calc(var(--content-size)/7 - 1px) 6px;background:var(--soft);font-size:var(--content-size);line-height:1.5;overflow-wrap:anywhere;unicode-bidi:isolate}.priority-row{padding-block:calc(var(--content-size)/4 + 1px)}.compact-row .message-line{display:block;-webkit-line-clamp:unset;overflow:visible}.row-action{cursor:pointer;touch-action:manipulation}.row-action:focus-visible{outline:2px solid var(--red);outline-offset:2px}.compact-row .repeat{font-size:var(--nick-size);margin-left:5px}.compact-row.emphasize-admin{border-color:var(--edge);background:var(--tint)}.follow-row.emphasize-admin{border-left-color:var(--red)}.repeat{font-variant-numeric:tabular-nums;white-space:nowrap;color:var(--red);font-weight:600}.card-action{display:block;text-align:left;padding:0;width:100%;overflow:hidden}
+.feed-wrap{position:relative;flex:1;min-height:0}.feed{height:100%;min-height:0;overflow-x:hidden;overflow-y:auto;overscroll-behavior-y:contain;overflow-anchor:none;scrollbar-width:thin;scrollbar-color:var(--line) transparent;padding:12px 12px 20px}.message-item{position:relative;margin:0 0 var(--row-gap);border:1px solid transparent;border-radius:9px;padding:var(--row-pad) 21px var(--row-pad) 6px;min-width:0;overflow:hidden;unicode-bidi:isolate}.message-item.emphasize-follow{background:var(--tint)}.message-item.emphasize-admin{border-color:var(--edge);background:var(--tint)}.message-line{font-size:var(--content-size);line-height:1.5;overflow-wrap:anywhere;word-break:normal;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:6;overflow:hidden}.identity{display:inline-flex;align-items:baseline;justify-content:center;gap:0;width:5em;flex:none;max-width:100%;vertical-align:baseline;unicode-bidi:isolate;line-height:1.55}.sheet-body .identity{width:auto;max-width:100%;justify-content:flex-start}.nickname{display:inline-block;vertical-align:baseline;padding:0;margin:0;max-width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-align:left;color:var(--nick);font-size:var(--nick-size);font-weight:500;line-height:1.55;unicode-bidi:isolate}.nickname:disabled{opacity:1}.identity.important .nickname{color:var(--red)}.colon{font-size:calc(var(--content-size)*.9);color:var(--muted);margin:0 5px 0 2px}.speech{font-size:var(--content-size);color:var(--text);white-space:pre-wrap;overflow-wrap:anywhere;unicode-bidi:isolate}.message-line .repeat{font-size:var(--nick-size);margin-left:7px}.message-more{position:absolute;right:1px;top:0;bottom:0;width:20px;color:var(--muted);font-size:18px;line-height:1;padding:0}.notice-row .message-line{display:block;-webkit-line-clamp:unset;overflow:visible}.notice-row .speech{color:var(--muted)}.notice-gap{display:inline-block;width:5px}.notice-mark{font-weight:600;color:var(--red)}
+.crowd-row{padding-top:calc(var(--row-pad) + 2px);padding-bottom:calc(var(--row-pad) + 2px)}.crowd-row.emphasize-crowd{background:var(--tint);border-left:2px solid var(--edge)}.crowd-text{display:block;text-align:left;padding:0;font-size:var(--content-size);color:var(--text);font-weight:400;line-height:1.45;overflow-wrap:anywhere;unicode-bidi:plaintext;display:-webkit-box;-webkit-box-orient:vertical;-webkit-line-clamp:4;overflow:hidden}.emphasize-crowd .crowd-text{font-size:calc(var(--content-size)*1.2);color:var(--red);font-weight:600}.crowd-meta{font-size:10px;color:var(--muted);margin-top:3px}.compact-row.gift-row{background:var(--soft);border:1px solid var(--line);border-radius:3px}.compact-row.gift-row.emphasize-gift{background:var(--tint);border-color:var(--edge)}.gift-row.message-item{padding:var(--row-pad-strong) 25px var(--row-pad-strong) 6px;margin:0 0 var(--row-gap-strong);overflow:visible}.gift-value-inline{margin-left:7px;font-size:var(--nick-size);color:var(--gift);font-variant-numeric:tabular-nums;white-space:nowrap}.gift-divider{font-size:11px;font-weight:500;color:var(--muted);padding:10px 4px 11px}.gift-caption{padding:7px 16px 0;font-size:10px;color:var(--muted);flex:none}.feed-empty{height:100%;min-height:80px;display:flex;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:13px;padding:25px;line-height:1.9}.new-message{position:absolute;bottom:14px;left:50%;transform:translateX(-50%);border:1px solid var(--edge);border-radius:22px;padding:9px 17px;background:var(--card);color:var(--red);font-size:12px;white-space:nowrap;box-shadow:0 4px 16px var(--shadow)}.toast{position:absolute;z-index:10;bottom:20px;left:50%;transform:translateX(-50%);max-width:calc(100% - 30px);padding:10px 15px;border-radius:11px;background:var(--card);color:var(--text);box-shadow:0 6px 30px var(--shadow);font-size:12px;text-align:center;pointer-events:none}
+.sheet{position:fixed;inset:auto 0 0;margin:0 auto;width:100%;max-width:580px;max-height:90vh;max-height:90dvh;border:1px solid var(--line);border-bottom:0;border-radius:20px 20px 0 0;padding:0 0 env(safe-area-inset-bottom);background:var(--surface);color:var(--text);overflow:hidden;box-shadow:0 -10px 70px var(--shadow)}.sheet[open]{display:flex;flex-direction:column}.sheet::backdrop{background:#080a1075;backdrop-filter:blur(2px)}.sheet-header{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:7px 10px 6px 18px;min-height:55px;border-bottom:1px solid var(--line);flex:none}.sheet-header h2{font-size:16px;font-weight:600;outline:none;min-width:0;overflow-wrap:anywhere}.close-button{flex:none;width:40px;height:40px;color:var(--muted);font-size:18px}.sheet-body{overflow-y:auto;overscroll-behavior-y:contain;padding:16px 18px 22px;min-height:0;scrollbar-width:thin}.sheet-intro,.helper{font-size:12px;color:var(--muted);line-height:1.8;overflow-wrap:anywhere}.sheet-intro{margin-bottom:16px}.helper{font-size:11px;margin-top:12px}.form-section{border:1px solid var(--line);border-radius:12px;padding:13px;margin-bottom:14px}.form-section h3{font-size:13px;font-weight:600;margin-bottom:4px}.form-section p{font-size:11px;color:var(--muted);margin-bottom:12px;line-height:1.8}.field-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field label,.field-label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}.field.spaced{margin-top:12px}.theme-options{display:flex;gap:8px;margin-bottom:18px}.theme-choice{border:1px solid var(--line);padding:9px 12px;border-radius:9px;flex:1;text-align:left;font-size:13px}.theme-choice[aria-pressed=true]{border-color:var(--red);color:var(--red);background:var(--tint)}.theme-choice span{display:inline-block;width:12px;height:12px;border:1px solid #8a8d98;border-radius:50%;margin-right:6px;vertical-align:-1px}.theme-dark{background:#17191d}.theme-light{background:#fff}.button-row{display:flex;gap:9px;margin-top:13px}.button{display:flex;align-items:center;justify-content:center;min-height:43px;padding:10px 12px;border-radius:10px;background:var(--card);border:1px solid var(--line);font-size:13px;font-weight:600;white-space:nowrap;color:var(--text)}.button.primary{background:var(--red);border-color:var(--red);color:var(--surface)}:root[data-theme=light] .button.primary{color:#fff}.button-row .button{flex:1}.button.full{width:100%;margin-top:12px}.form-notice,.sheet-toast{font-size:12px;color:var(--red);margin-top:9px;line-height:1.7;overflow-wrap:anywhere}.form-notice:empty,.sheet-toast:empty{display:none}.section-label{font-size:12px;font-weight:600;margin:17px 0 9px}.room-facts{padding:12px;border-radius:10px;background:var(--soft);font-size:12px;line-height:1.85;margin:14px 0;color:var(--muted)}.room-facts strong{color:var(--text);font-weight:500}.share-row{display:flex;gap:7px;align-items:center}.share-row input{flex:1}.share-row .button{flex:none}.share-select{height:41px;font-size:12px;margin-bottom:9px}.details-toggle,.raw-details{margin-top:14px;font-size:11px;color:var(--muted)}summary{cursor:pointer}.details-toggle p{line-height:1.8;margin-top:9px}.user-meta-tags{font-size:11px;color:var(--red);white-space:nowrap}.user-name-large{font-size:20px;font-weight:600;overflow-wrap:anywhere;line-height:1.6;unicode-bidi:plaintext}.uid-line{font-size:12px;color:var(--muted);display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:3px 0 16px}.uid-line button{font-size:11px;padding:3px 7px;border:1px solid var(--line);border-radius:5px}.follow-item{display:flex;gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--line);min-width:0}.follow-person{flex:1;min-width:0;text-align:left;padding:0}.follow-person strong{display:block;color:var(--red);font-size:13px;font-weight:500;overflow-wrap:anywhere}.follow-person small{font-size:11px;color:var(--muted);overflow-wrap:anywhere}.follow-history{font-size:11px;color:var(--muted);padding:7px 4px;white-space:nowrap}.follow-remove{font-size:19px;min-width:30px;min-height:36px;color:var(--muted)}.follow-empty{font-size:12px;color:var(--muted);padding:14px 0}.detail-time{font-size:11px;color:var(--muted);margin-bottom:10px;font-variant-numeric:tabular-nums}.detail-content{padding:12px;background:var(--soft);border-radius:10px;margin:10px 0;font-size:max(14px,var(--content-size));line-height:1.7;white-space:pre-wrap;overflow-wrap:anywhere;max-height:250px;overflow:auto;unicode-bidi:plaintext}.detail-meta{font-size:12px;color:var(--muted);line-height:1.9;overflow-wrap:anywhere}.raw-details pre{padding:12px;border:1px solid var(--line);border-radius:9px;background:var(--input);font:11px/1.7 ui-monospace,Consolas,monospace;white-space:pre-wrap;overflow-wrap:anywhere;max-height:280px;overflow:auto;unicode-bidi:plaintext}.original-item{border-bottom:1px solid var(--line);padding:10px 0}.original-item p{font-size:var(--content-size);white-space:pre-wrap;overflow-wrap:anywhere;max-height:200px;overflow:auto;unicode-bidi:plaintext}.participant-list{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}.participant{font-size:12px;color:var(--red);border:1px solid var(--edge);border-radius:7px;padding:5px 7px;max-width:100%;overflow-wrap:anywhere}
+.font-label{display:flex;justify-content:space-between;align-items:center;gap:10px;font-size:13px;font-weight:600}.font-label output{font-size:14px;color:var(--red);font-variant-numeric:tabular-nums}.font-range{height:44px;padding:0;border:0;background:transparent;accent-color:var(--red)}.range-labels{display:flex;justify-content:space-between;font-size:11px;color:var(--muted)}.size-options{display:flex;gap:7px;margin:10px 0}.size-options .button{flex:1;padding-left:5px;padding-right:5px;min-height:43px;font-size:12px}.size-options [aria-pressed=true]{border-color:var(--red);color:var(--red);background:var(--tint)}.font-preview{padding:9px;background:var(--soft);border-radius:8px;font-size:var(--content-size);line-height:1.5;overflow-wrap:anywhere}.font-preview span{font-size:var(--nick-size);color:var(--nick)}.font-section .helper{margin-bottom:0}.test-banner{display:flex;align-items:center;gap:6px;flex:none;padding:0 10px 0 14px;border-bottom:1px solid var(--edge);background:var(--tint);color:var(--red)}.test-banner span{flex:1;min-width:0;font-size:11px}.test-banner button{flex:none;min-height:43px;padding:0 8px;font-size:12px}.test-actions{display:grid;grid-template-columns:1fr 1fr;gap:10px}.test-actions .button{min-height:45px;font-size:12px}.test-state{font-size:12px;line-height:1.8;color:var(--muted);margin-bottom:16px}
+.message-item.is-admin,.message-item.is-followed{padding-top:var(--row-pad-strong);padding-bottom:var(--row-pad-strong);margin:0 0 var(--row-gap-strong);border-radius:5px}.message-item.is-admin .message-line,.message-item.is-followed .message-line{display:block;-webkit-line-clamp:unset;overflow:visible}
+/* 底纹只包住文字本身，不拉成横贯整屏的一条；外层 <article> 仍占满整行，
+   所以「⋯」按钮还对齐在同一列。礼物／给分／进场行各有底色，这里不碰。 */
+.message-item.is-admin:not(.gift-row):not(.score-row):not(.notice-row),.message-item.is-followed:not(.gift-row):not(.score-row):not(.notice-row){border-color:transparent;background:none;padding-block:0;padding-left:0}
+.message-item.is-admin:not(.gift-row):not(.score-row):not(.notice-row) .message-line,.message-item.is-followed:not(.gift-row):not(.score-row):not(.notice-row) .message-line{width:fit-content;max-width:100%;padding:var(--row-pad-strong) 6px;border:1px solid transparent;border-radius:5px}
+.message-item.is-admin.emphasize-admin:not(.gift-row):not(.score-row):not(.notice-row) .message-line{border-color:var(--edge);background:var(--tint)}
+.message-item.is-followed.emphasize-follow:not(.gift-row):not(.score-row):not(.notice-row) .message-line{border-color:var(--fo-border);background:linear-gradient(110deg,var(--fo-wash),transparent 40%,var(--fo-wash2)),var(--fo-bg)}
+.compact-row .identity,.message-item.is-admin .identity,.message-item.is-followed .identity{line-height:1.5}.follow-row.emphasize-follow,.message-item.emphasize-follow:not(.gift-row){--text:var(--fo-text);--muted:var(--fo-muted);--nick:var(--fo-nick);--red:var(--fo-red);--row-accent:var(--fo-accent);border:1px solid var(--fo-border);background:linear-gradient(110deg,var(--fo-wash),transparent 40%,var(--fo-wash2)),var(--fo-bg);color:var(--text)}.row-arrival{animation:row-arrival 700ms ease-out both}@keyframes row-arrival{from{box-shadow:inset 0 0 0 1px var(--row-accent,#ff758433),inset 0 0 10px var(--row-accent,#ff758433)}to{box-shadow:inset 0 0 0 1px transparent,inset 0 0 10px transparent}}
+:root{--gift-row-height:calc(var(--content-size)*2 + 4px);--gift-progress:#ff758424}:root[data-theme=light]{--gift-progress:#b8294018}.donor-row{height:var(--gift-row-height);display:flex;align-items:center;gap:5px;overflow:hidden}.donor-row>.identity{flex:none;max-width:38%}.gift-capsules{display:flex;align-items:center;gap:4px;flex:1;min-width:0;height:100%;overflow-x:auto;overflow-y:hidden;scrollbar-width:none;overscroll-behavior-x:contain;touch-action:pan-x}.gift-capsules::-webkit-scrollbar{display:none}.gift-capsule{position:relative;display:inline-flex;align-items:center;gap:4px;flex:none;height:100%;padding:0 6px;border:1px solid var(--edge);border-radius:999px;overflow:hidden;white-space:nowrap;font-size:var(--content-size);line-height:1;color:var(--text);background:transparent;isolation:isolate}.gift-capsule::before{content:"";position:absolute;inset:0;background:var(--gift-progress);transform:scaleX(var(--remaining,1));transform-origin:left center;pointer-events:none;z-index:-1}.capsule-label,.capsule-seconds{position:relative}.capsule-seconds{min-width:4ch;flex:none;text-align:right;font-size:var(--nick-size);font-variant-numeric:tabular-nums;color:var(--text);opacity:.8}
+.tab-dot{position:absolute;right:-5px;top:8px;width:6px;height:6px;border-radius:50%;background:var(--red)}.visually-hidden{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}.score-row .message-line{display:block;-webkit-line-clamp:unset;overflow:visible}.score-time{font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums;margin-top:3px}.score-mark{display:inline-block;width:1.15em;margin-right:3px;text-align:center;font-size:calc(var(--content-size)*.95);font-weight:600;line-height:1.55;vertical-align:baseline;-webkit-user-select:none;user-select:none}.score-mark.ok{color:var(--green)}.score-mark.wait{color:var(--muted);opacity:.55;font-weight:400}.score-mark.miss{color:var(--muted);opacity:.7}.setting-toggle{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px;font-size:12px;cursor:pointer}.setting-toggle+ .setting-toggle{border-top:1px solid var(--line)}.setting-toggle input{appearance:none;flex:none;width:40px;height:24px;padding:2px;border:1px solid var(--line);border-radius:999px;background:var(--input);cursor:pointer}.setting-toggle input::before{content:"";display:block;width:18px;height:18px;border-radius:50%;background:var(--muted)}.setting-toggle input:checked{background:var(--red);border-color:var(--red)}.setting-toggle input:checked::before{background:var(--surface);transform:translateX(16px)}.attention-section .helper{margin-bottom:0}.gift-row:not(.emphasize-gift){--gift-progress:#ffffff12}.gift-row:not(.emphasize-gift) .gift-capsule{border-color:var(--line)}.gift-row:not(.emphasize-gift) .gift-value-inline,.follow-row:not(.emphasize-follow):not(.emphasize-admin) .repeat{color:var(--muted)}:root[data-theme=light] .gift-row:not(.emphasize-gift){--gift-progress:#20263014}
+.custom-gift-fields{display:grid;grid-template-columns:minmax(0,1fr) 96px;gap:8px}.custom-gift-item{display:flex;align-items:center;gap:8px;border-top:1px solid var(--line)}.custom-gift-edit{flex:1;min-width:0;text-align:left;padding:9px 0}.custom-gift-edit strong{display:block;font-size:13px;font-weight:500;color:var(--gift);overflow-wrap:anywhere}.custom-gift-edit small{font-size:11px;color:var(--muted)}.custom-gift-list{margin-top:12px}.custom-gift-list .helper{margin-bottom:0}
+@media(min-width:800px){.app{height:calc(100dvh - 40px);margin:20px auto;border:1px solid var(--line);border-radius:18px;box-shadow:0 20px 80px var(--shadow)}.topbar{padding:10px 18px 6px;min-height:60px}.tabs{padding-left:22px}.feed{padding-left:20px;padding-right:20px}.priority-list{padding-left:20px;padding-right:20px}.sheet{bottom:20px;border-bottom:1px solid var(--line);border-radius:18px;max-height:calc(100dvh - 60px)}.gift-caption{padding-left:22px}}
+@media(max-width:374px){.topbar{padding-left:10px;padding-right:9px}.room-name{font-size:14px}.icon-button{width:40px}.tabs{padding-left:12px;padding-right:10px;gap:8px}.tabs-caption{display:none}.track-bar .gift-caption{padding-left:13px}.track-action{min-width:48px;padding:0 7px}.feed{padding-left:9px;padding-right:9px}.priority-list{padding-left:9px;padding-right:9px}.identity{width:4.2em}.sheet-body{padding-left:14px;padding-right:14px}.field-grid{gap:9px}}
+@media(max-height:620px){.topbar{padding-top:4px;min-height:48px}.tabs{height:40px}.sheet{max-height:94dvh}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important;animation:none!important;transition:none!important}}
+
+.rooms-home,.monitor-screen{display:flex;flex-direction:column;flex:1;min-height:0;overflow:hidden}.rooms-heading{flex:1;min-width:0;padding:4px 2px}.rooms-heading h1{font-size:20px;line-height:1.5;font-weight:600}.rooms-heading p{font-size:12px;color:var(--muted);line-height:1.5}.rooms-home .topbar{padding-top:12px;padding-bottom:10px;border-bottom:1px solid var(--line)}.rooms-home .icon-button{width:44px;height:44px}.add-room-button{font-size:27px;color:var(--red)}.saved-room-list{flex:1;min-height:0;overflow-y:auto;overscroll-behavior-y:contain;padding:0 14px}.saved-room-row{display:flex;align-items:center;gap:6px;min-height:67px;border-bottom:1px solid var(--line)}.saved-room-open{flex:1;min-width:0;text-align:left;padding:12px 2px}.saved-room-open strong{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:16px;font-weight:500;line-height:1.5;unicode-bidi:plaintext}.saved-room-open small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px;line-height:1.6;color:var(--muted);unicode-bidi:plaintext}.saved-room-edit{flex:none;width:44px;height:44px;display:grid;place-items:center;color:var(--muted)}.saved-room-open:active,.saved-room-edit:active{background:var(--soft)}.rooms-empty{padding:46px 16px;text-align:center;font-size:14px;line-height:2;color:var(--muted)}.rooms-empty small{font-size:12px}.room-list-note{padding:11px 16px;font-size:11px;line-height:1.7;color:var(--muted);flex:none}.room-list-note:empty{display:none}.room-editor-help{margin-bottom:14px}.remove-room-button{color:var(--red)}.monitor-back{margin-left:-4px}.monitor-back svg{width:21px;height:21px}
+.track-bar{display:flex;align-items:center;gap:2px;flex:none;padding:3px 8px 3px 0}.track-bar .gift-caption{flex:1;min-width:0;padding:0 4px 0 16px;line-height:1.55}
+.track-action{flex:none;min-width:52px;height:44px;padding:0 10px;border-radius:10px;font-size:13px;font-weight:600;text-align:center;color:var(--text)}.track-action:active{background:var(--soft)}.track-action[disabled]{color:var(--muted);opacity:.55}
+.track-row{display:flex;align-items:center;gap:10px;padding:11px 4px;border-bottom:1px solid var(--line);min-width:0}.track-row:last-child{border-bottom:0}
+.track-main{flex:1;min-width:0}.track-name{font-size:var(--content-size);line-height:1.5;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.track-sub{font-size:11px;line-height:1.65;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.track-figures{flex:none;text-align:right;font-variant-numeric:tabular-nums}.track-value{font-size:calc(var(--content-size)*1.05);font-weight:600;line-height:1.45}
+.track-delta{font-size:11px;line-height:1.65;color:var(--muted)}.track-delta.up{color:var(--green)}.track-delta.down{color:var(--red)}
+.track-row.missing .track-value{font-size:12px;font-weight:400;color:var(--muted)}
+.track-empty{padding:44px 10px;text-align:center;font-size:13px;line-height:2.1;color:var(--muted)}.track-empty small{display:block;font-size:12px}
+.track-hit{display:flex;width:100%;align-items:center;gap:9px;min-height:56px;padding:9px 2px;border-bottom:1px solid var(--line);text-align:left}.track-hit:active{background:var(--soft)}
+.track-tick{flex:none;width:1.2em;text-align:center;font-size:14px;font-weight:600;color:var(--green)}
+.track-hit-main{flex:1;min-width:0}.track-hit.on .track-hit-name{font-weight:600}
+.track-hit-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:13px;line-height:1.5;unicode-bidi:plaintext}
+.track-hit-nick{font-size:11px;line-height:1.6;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;unicode-bidi:plaintext}
+.track-hit-score{flex:none;font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+#track-notice{color:var(--muted)}
+.coach-duty{font-size:12px;line-height:1.7;padding:10px 12px;border-radius:10px;background:var(--soft);color:var(--muted);margin-bottom:12px;overflow-wrap:anywhere}
+.coach-duty.on{background:var(--tint);color:var(--red);font-weight:600}
+.coach-card{border:1px solid var(--line);border-radius:12px;padding:12px;margin-bottom:12px}.coach-card:last-child{margin-bottom:0}
+.coach-card h3{font-size:13px;font-weight:600;margin-bottom:2px}.coach-card .helper{margin-bottom:0}
+.coach-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:11px}.coach-grid input{font-variant-numeric:tabular-nums}
+.setting-toggle input:disabled{opacity:.4;cursor:default}
+.coach-status{margin-top:12px}
+.coach-state{display:flex;align-items:flex-start;gap:8px;font-size:12px;line-height:1.7;padding:8px 0;border-top:1px solid var(--line)}.coach-state:first-child{border-top:0;padding-top:2px}
+.coach-state b{flex:none;width:1.2em;text-align:center;font-weight:600;color:var(--muted)}.coach-state.ok b{color:var(--green)}.coach-state.bad b{color:var(--red)}
+.coach-state span{min-width:0;color:var(--muted);overflow-wrap:anywhere}.coach-state strong{color:var(--text);font-weight:500}
+.coach-log-row{display:flex;gap:9px;align-items:baseline;padding:8px 2px;border-bottom:1px solid var(--line);font-size:12px;line-height:1.6;min-width:0}.coach-log-row:last-child{border-bottom:0}
+.coach-log-row time{flex:none;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums}
+.coach-log-row p{min-width:0;overflow-wrap:anywhere;unicode-bidi:plaintext}.coach-log-row.buzz p{color:var(--text)}.coach-log-row:not(.buzz) p{color:var(--muted)}
+.coach-log-empty{padding:20px 8px;text-align:center;font-size:12px;line-height:2;color:var(--muted)}
+
+/* ===== pad 分栏布局 =====
+   由 :root[data-layout=pad] 驱动，与视口宽度解耦：模式由用户在登录页选定。
+   iPadOS 桌面模式自报 macOS，宽度与指针探测都只能当默认值用。 */
+.rail-toggle{display:none}
+.monitor-empty{flex:1;display:none;align-items:center;justify-content:center;text-align:center;color:var(--muted);font-size:14px;line-height:2;padding:30px}
+.monitor-empty p{margin:0}
+:root[data-layout=pad] .app{max-width:none;width:100%;height:100dvh;margin:0;border:0;border-radius:0;box-shadow:none;flex-direction:row;align-items:stretch}
+:root[data-layout=pad] .rooms-home{width:280px;flex:none;border-right:1px solid var(--line)}
+:root[data-layout=pad] .monitor-screen{flex:1;min-width:0}
+:root[data-layout=pad][data-rail=collapsed] .rooms-home{width:0;border-right-width:0;overflow:hidden}
+:root[data-layout=pad] .monitor-back{display:none}
+:root[data-layout=pad] .rail-toggle{display:grid}
+:root[data-layout=pad] .rooms-home .topbar{padding-right:8px}
+:root[data-layout=pad] .rooms-home .rooms-heading p{display:none}
+/* 左栏常驻才需要标出当前房间。整幅分隔线在 280px 窄栏里会把列表切得很碎，
+   改成留白隔开的圆角卡片，底色与圆头药丸都收在卡片里。
+   「⋯」常驻不做 hover——pad 是触屏，:hover 不成立。 */
+:root[data-layout=pad] .saved-room-list{padding:8px 10px 10px;display:flex;flex-direction:column;gap:3px}
+:root[data-layout=pad] .saved-room-row{position:relative;min-height:58px;gap:2px;padding-right:3px;border-bottom:0;border-radius:11px}
+:root[data-layout=pad] .saved-room-open{padding:9px 8px 9px 15px;border-radius:11px}
+:root[data-layout=pad] .saved-room-open strong{font-size:15px}
+:root[data-layout=pad] .saved-room-edit{width:34px;height:34px;border-radius:9px}
+:root[data-layout=pad] .saved-room-row:hover{background:var(--soft)}
+:root[data-layout=pad] .saved-room-edit:hover{background:var(--line)}
+:root[data-layout=pad] .saved-room-row[data-active]{background:var(--tint);box-shadow:inset 0 0 0 1px var(--edge)}
+:root[data-layout=pad] .saved-room-row[data-active]::before{content:'';position:absolute;left:6px;top:50%;width:3px;height:20px;border-radius:2px;background:var(--red);transform:translateY(-50%)}
+:root[data-layout=pad] .saved-room-row[data-active] .saved-room-open strong{color:var(--red)}
+/* 补一条细线把列表和脚注分开 */
+:root[data-layout=pad] .room-list-note{border-top:1px solid var(--line);padding:10px 16px}
+/* 左栏常驻时右栏顶栏不再重复放设置入口 */
+:root[data-layout=pad] .monitor-screen .settings-entry{display:none}
+:root[data-layout=pad] .monitor-screen[data-room=none] .monitor-empty{display:flex}
+:root[data-layout=pad] .monitor-screen[data-room=none] .tabs,:root[data-layout=pad] .monitor-screen[data-room=none] .page,:root[data-layout=pad] .monitor-screen[data-room=none] .room-button,:root[data-layout=pad] .monitor-screen[data-room=none] .topbar .icon-button:not(.rail-toggle){display:none}
+/* 视口被分屏挤窄时回落单栏，两栏重新互斥 */
+@media(max-width:700px){:root[data-layout=pad] .app{flex-direction:column}:root[data-layout=pad] .rooms-home,:root[data-layout=pad][data-rail=collapsed] .rooms-home{width:100%;flex:1;min-height:0;border-right:0}:root[data-layout=pad] .monitor-back{display:grid}:root[data-layout=pad] .rail-toggle{display:none}:root[data-layout=pad][data-screen=monitor] .rooms-home{display:none}:root[data-layout=pad][data-screen=home] .monitor-screen{display:none}:root[data-layout=pad] .monitor-screen .settings-entry{display:grid}}
+
+/* ===== pad 专属「斗鱼原生还原」层 =====
+   由 :root[data-rich=on] 驱动并限定在 [data-layout=pad] 下，手机模式不受影响。
+   取值实测自斗鱼网页端直播间的样式表。 */
+:root[data-layout=pad][data-rich=on]{--dy-main:#ff5d23}
+/* 1. 流式排版：取消 5em 固定昵称列，还原「徽章 昵称：正文」一行流下来 */
+/* 徽章按中线而非基线对齐：0.72em 的徽章基线对齐会整条低 2.5px。 */
+/* 昵称完整显示：徽章条已占掉一截，再截到 14em 就只剩几十像素。改成长过整行才裁。 */
+:root[data-layout=pad][data-rich=on] .feed .identity,:root[data-layout=pad][data-rich=on] .priority-list .identity{width:auto;max-width:100%;justify-content:flex-start;align-items:center}
+/* align-items:center 之后没有任何一项参与基线对齐，.identity 对外的基线只能取第一个
+   flex 项（徽章条），徽章越高掉得越狠（1.6em 的贵族图标能让行尾掉 3.73px）。
+   给昵称标 align-self:baseline，它才是基线来源。 */
+:root[data-layout=pad][data-rich=on] .feed .identity>.nickname,:root[data-layout=pad][data-rich=on] .priority-list .identity>.nickname{align-self:baseline}
+:root[data-layout=pad][data-rich=on] .donor-row>.identity{max-width:none;margin-right:6px}
+:root[data-layout=pad][data-rich=on] .feed .message-line{display:block;line-height:1.45;letter-spacing:.2px}
+:root[data-layout=pad][data-rich=on] .feed .message-item{padding-left:8px;padding-right:22px}
+/* 左缩进交给带底纹的内层，文字起点才与其余行对齐。 */
+:root[data-layout=pad][data-rich=on] .feed .message-item.is-admin:not(.gift-row):not(.score-row):not(.notice-row),:root[data-layout=pad][data-rich=on] .feed .message-item.is-followed:not(.gift-row):not(.score-row):not(.notice-row){padding-left:0}
+:root[data-layout=pad][data-rich=on] .feed .message-item.is-admin:not(.gift-row):not(.score-row):not(.notice-row) .message-line,:root[data-layout=pad][data-rich=on] .feed .message-item.is-followed:not(.gift-row):not(.score-row):not(.notice-row) .message-line{padding-inline:8px}
+:root[data-layout=pad][data-rich=on] .feed .colon{margin:0 3px 0 1px}
+/* 2. 弹幕颜色：barrageColor = col - 1，缺失或 0 走默认正文色。 */
+:root[data-layout=pad][data-rich=on] .speech[data-col="1"]{color:#ff314e}
+:root[data-layout=pad][data-rich=on] .speech[data-col="2"]{color:#4a94ef}
+:root[data-layout=pad][data-rich=on] .speech[data-col="3"]{color:#70c150}
+:root[data-layout=pad][data-rich=on] .speech[data-col="4"]{color:#d4a113}
+:root[data-layout=pad][data-rich=on] .speech[data-col="5"]{color:#8a5be9}
+:root[data-layout=pad][data-rich=on] .speech[data-col="6"]{color:#e04ac0}
+/* 3. 徽章条：贵族 / 房管 / 粉丝牌 / 用户等级，手机模式 display:none */
+.dy-badges{display:none}
+:root[data-layout=pad][data-rich=on] .dy-badges{display:inline-flex;align-items:center;gap:3px;margin-right:5px;vertical-align:middle}
+:root[data-layout=pad][data-rich=on] .dy-badges:empty{display:none}
+.dy-badge{display:inline-flex;align-items:stretch;height:1.25em;border-radius:3px;overflow:hidden;font-size:calc(var(--content-size)*.72);font-weight:700;line-height:1.25em;white-space:nowrap;font-variant-numeric:tabular-nums;-webkit-user-select:none;user-select:none}
+/* 粉丝牌：原生是固定 66x19 的两段式胶囊，牌名过长靠 scale(.9) 压扁。
+   这里改成跟随字号的弹性胶囊，牌名不压扁、超长省略。配色逐档采样自 v5 配置的底图。 */
+.dy-fans i{font-style:normal;padding:0 4px;color:#fff;background:var(--dy-a);min-width:1.9em;display:inline-flex;justify-content:center}
+.dy-fans b{padding:0 5px 0 4px;color:#fff;background:var(--dy-b);max-width:7em;overflow:hidden;text-overflow:ellipsis}
+.dy-fans{--dy-a:#727272;--dy-b:#929292}
+.dy-fans[data-tier="1"]{--dy-a:#4bb26f;--dy-b:#57c37e}
+.dy-fans[data-tier="2"]{--dy-a:#249ea6;--dy-b:#3ab4bc}
+.dy-fans[data-tier="3"]{--dy-a:#3980d1;--dy-b:#5fa1e8}
+.dy-fans[data-tier="4"]{--dy-a:#6c67d7;--dy-b:#8487ec}
+.dy-fans[data-tier="5"]{--dy-a:#f26820;--dy-b:#f88d55}
+.dy-fans[data-tier="6"]{--dy-a:#e62d4e;--dy-b:#f95e82}
+/* 用户等级：原生是 34x16 渐变胶囊 + 盾徽 + 数字，每 10 级一档；端点逐级采样自原图。 */
+.dy-level{padding:0 5px;color:#fff;background:linear-gradient(135deg,var(--dy-a),var(--dy-b))}
+.dy-level[data-tier="1"]{--dy-a:#95805f;--dy-b:#80653d}
+.dy-level[data-tier="2"]{--dy-a:#638a62;--dy-b:#3f7341}
+.dy-level[data-tier="3"]{--dy-a:#4889c5;--dy-b:#296dad}
+.dy-level[data-tier="4"]{--dy-a:#6b87ea;--dy-b:#374dc4}
+.dy-level[data-tier="5"]{--dy-a:#756eef;--dy-b:#7350d6}
+.dy-level[data-tier="6"]{--dy-a:#a05be6;--dy-b:#821fbf}
+.dy-level[data-tier="7"]{--dy-a:#c263e3;--dy-b:#ad29c3}
+.dy-level[data-tier="8"]{--dy-a:#e55fbf;--dy-b:#d31478}
+.dy-level[data-tier="9"]{--dy-a:#eb635b;--dy-b:#d62a2a}
+.dy-level[data-tier="10"]{--dy-a:#f18641;--dy-b:#e53a05}
+.dy-level[data-tier="11"]{--dy-a:#ffc472;--dy-b:#ff8853}
+.dy-level[data-tier="12"]{--dy-a:#f8c340;--dy-b:#f9cc50}
+.dy-level[data-tier="13"]{--dy-a:#ac3dc0;--dy-b:#e97983}
+.dy-level[data-tier="14"]{--dy-a:#c319e6;--dy-b:#f9499e}
+.dy-level[data-tier="15"]{--dy-a:#e42d55;--dy-b:#e7574e}
+/* 浅色主题另有一套更亮的图，同样逐级采样。 */
+:root[data-theme=light] .dy-level[data-tier="1"]{--dy-a:#e8cea6;--dy-b:#d9ba8b;color:#6b4a1e}
+:root[data-theme=light] .dy-level[data-tier="2"]{--dy-a:#a6e0a5;--dy-b:#81d484;color:#1d5220}
+:root[data-theme=light] .dy-level[data-tier="3"]{--dy-a:#78bbf9;--dy-b:#4b9eea}
+:root[data-theme=light] .dy-level[data-tier="4"]{--dy-a:#8da6fe;--dy-b:#6179f6}
+:root[data-theme=light] .dy-level[data-tier="5"]{--dy-a:#9993ff;--dy-b:#835af8}
+:root[data-theme=light] .dy-level[data-tier="6"]{--dy-a:#c58bfe;--dy-b:#b44ef2}
+:root[data-theme=light] .dy-level[data-tier="7"]{--dy-a:#ed81fe;--dy-b:#d341ea}
+:root[data-theme=light] .dy-level[data-tier="8"]{--dy-a:#ff7db4;--dy-b:#ff1f95}
+:root[data-theme=light] .dy-level[data-tier="9"]{--dy-a:#ff6d63;--dy-b:#ff3f3f}
+:root[data-theme=light] .dy-level[data-tier="10"]{--dy-a:#ff9642;--dy-b:#fb450b}
+:root[data-theme=light] .dy-level[data-tier="11"]{--dy-a:#ffbe6d;--dy-b:#ff8046}
+:root[data-theme=light] .dy-level[data-tier="12"]{--dy-a:#f6be31;--dy-b:#f7c540;color:#5a3d00}
+:root[data-theme=light] .dy-level[data-tier="13"]{--dy-a:#9919e3;--dy-b:#e449b3}
+:root[data-theme=light] .dy-level[data-tier="14"]{--dy-a:#c319e6;--dy-b:#f9499e}
+:root[data-theme=light] .dy-level[data-tier="15"]{--dy-a:#f72b5b;--dy-b:#f45652}
+/* 贵族：原生是 28x28 立体徽章图，纯 CSS 只能做到金牌＋皇冠的意思 */
+.dy-noble{align-items:center;gap:2px;padding:0 5px 0 4px;color:#4a2f00;background:linear-gradient(100deg,#ffe08a,#f5b942 55%,#e8a01c)}
+/* 贵族整行底色：官方常量 barrage_bgcolor = #fff3df 是浅色主题的取值，深色下会炸眼，
+   换成透金薄底＋左侧描边；浅色那套另强制前景色，否则读不出来。 */
+:root[data-layout=pad][data-rich=on] .message-item[data-noble]:not([data-noble=""]){background:linear-gradient(90deg,#f5b94226,#f5b94207);border-radius:8px;box-shadow:inset 2px 0 0 #f5b942}
+:root[data-layout=pad][data-rich=on][data-theme=light] .message-item[data-noble]:not([data-noble=""]){background:#fff3df;box-shadow:inset 2px 0 0 #e8a01c}
+:root[data-layout=pad][data-rich=on][data-theme=light] .message-item[data-noble]:not([data-noble=""]) .speech,:root[data-layout=pad][data-rich=on][data-theme=light] .message-item[data-noble]:not([data-noble=""]) .nickname,:root[data-layout=pad][data-rich=on][data-theme=light] .message-item[data-noble]:not([data-noble=""]) .colon{color:#4a2f00}
+/* 房管 / 超管：斗鱼是「管」「超」单字牌 */
+.dy-admin{padding:0 4px;color:#fff;background:#e64a4a}
+.dy-super{padding:0 4px;color:#fff;background:#7a5cd8}
+/* 3b. 原生图标：Go 端代理并缓存到 /assets/ 下，页面只连本机。
+   图没到位时上面那套 CSS 自绘徽章原样留着，不会变成一排碎图。 */
+/* 未解码前缩成 1px 透明片。不能用 display:none——浏览器压根不会去取，
+   于是永远等不到 load。踩过坑，别改回去。 */
+.dy-art,.dy-prefix{position:absolute;left:0;top:0;width:1px;height:1px;opacity:0;pointer-events:none}
+/* 原图里已画好数字，整块让位给图。 */
+.dy-level[data-art]{position:relative;padding:0;background:none;color:transparent;width:calc(1.25em*34/16)}
+.dy-level[data-art]>.dy-art{inset:0;width:100%;height:100%;opacity:1}
+/* 原生 28x28 立体徽章，皇帝以上是 GIF。 */
+.dy-noble[data-art]{position:relative;padding:0;gap:0;background:none;width:1.6em;height:1.6em;align-self:center}
+.dy-noble[data-art]>span{display:none}
+.dy-noble[data-art]>.dy-art{inset:0;width:100%;height:100%;object-fit:contain;opacity:1}
+/* 底图 66x16，牌名从 x=22 起。等级数字两种摆法（实测自 shadow DOM）：无牌前缀时
+   18x16 占满左端 (1,0)；有前缀时前缀 22x22 压左端上探 6px，等级缩成 13x10 落在 (13,6)，
+   坐在金章下沿的号码带上而非穿过正中。原生用数字精灵图，这里用文字。
+   另有一版 80px 宽的 lbg_ 底图留给牌尾挂件，不画挂件所以取窄版。 */
+.dy-fans[data-art]{position:relative;overflow:visible;width:calc(1.25em*66/16);background:var(--dy-plate,none) center/100% 100% no-repeat,linear-gradient(90deg,var(--dy-a) 33%,var(--dy-b) 33%)}
+/* 字号按底图高度折算，不能继承徽章字号：继承会大出一成，三字牌名就被截。
+   letter-spacing 也要清掉，两位数等级差的正是那 0.4px。 */
+.dy-fans[data-art] i,.dy-fans[data-art] b{position:absolute;top:0;display:flex;align-items:center;height:100%;padding:0;min-width:0;max-width:none;background:none;letter-spacing:0}
+.dy-fans[data-art] i{left:calc(1/66*100%);width:calc(18/66*100%);justify-content:center;font-size:calc(1.25em*11/16);text-shadow:0 0 1px rgba(0,0,0,.65);z-index:2}
+/* 有牌前缀才切小号数字：金章只有下沿那道号码带留给数字，压在中间会被花纹吃掉。
+   水平位置故意不照抄——原生靠斜体精灵图两边留白才能三者互压，方头文字塞不进去，
+   所以数字收进 13..25、牌名右移到 28 起，让出一条真的缝。
+   描边用四个 1px 硬偏移而非 blur：blur 的黑晕会糊到牌名第一个字上。 */
+.dy-fans[data-art][data-prefix] i{left:calc(13/66*100%);width:calc(12/66*100%);top:auto;bottom:0;height:calc(10/16*100%);font-size:calc(1.25em*9/16);text-shadow:1px 0 0 #000,-1px 0 0 #000,0 1px 0 #000,0 -1px 0 #000}
+.dy-fans[data-art][data-prefix] b{left:calc(28/66*100%);right:calc(3/66*100%)}
+.dy-fans[data-art] b{left:calc(22/66*100%);right:calc(6/66*100%);font-size:calc(1.25em*12/16);transform:scale(.9);transform-origin:left center;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;z-index:2}
+/* 金章 22 高、底图 16 高，多出的 6 故意不照抄原生的全向上探：那样重心会高出一截，
+   在紧排的行里一眼就是没对齐。改成上下各探 3，两者重心重合。 */
+.dy-fans[data-art]>.dy-prefix[data-on]{left:calc(1/66*100%);top:calc(-3/16*100%);width:calc(22/66*100%);height:calc(22/16*100%);object-fit:contain;opacity:1;z-index:1}
+/* 4. 礼物行：礼物名染成主题橙 #ff5d23 */
+:root[data-layout=pad][data-rich=on] .gift-row .speech{color:var(--dy-main)}
+/* 5. 入场动画：淡入 + 轻微上移（prefers-reduced-motion 下全局已禁用） */
+:root[data-layout=pad][data-rich=on] .feed .row-arrival{animation:row-arrival 700ms ease-out both,dy-in 260ms ease-out both}
+@keyframes dy-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+/* 6. 贵宾进场：底色照抄 .Barrage-userEnter--*，通栏不留圆角。
+      深色模式把同一组颜色压到低透明度叠在深底上，浅色模式用原色。 */
+:root[data-layout=pad][data-rich=on] .feed .notice-row{margin-inline:-12px;margin-bottom:var(--row-gap);padding:6px 8px;border-radius:0}
+:root[data-layout=pad][data-rich=on] .feed .notice-row .nickname{color:var(--text)}
+:root[data-layout=pad][data-rich=on] .feed .notice-row[data-notice=knight]{background:rgba(236,232,219,.14)}
+:root[data-layout=pad][data-rich=on] .feed .notice-row[data-notice=viscount]{background:rgba(247,235,227,.14)}
+:root[data-layout=pad][data-rich=on] .feed .notice-row[data-notice=earl]{background:rgba(222,238,251,.14)}
+:root[data-layout=pad][data-rich=on] .feed .notice-row[data-notice=paladin]{background:rgba(227,230,232,.14)}
+:root[data-layout=pad][data-rich=on][data-theme=light] .feed .notice-row[data-notice=knight]{background:#ece8db}
+:root[data-layout=pad][data-rich=on][data-theme=light] .feed .notice-row[data-notice=viscount]{background:#f7ebe3}
+:root[data-layout=pad][data-rich=on][data-theme=light] .feed .notice-row[data-notice=earl]{background:#deeefb}
+:root[data-layout=pad][data-rich=on][data-theme=light] .feed .notice-row[data-notice=paladin]{background:#e3e6e8}
+</style></head><body>
+<main class="app">
+<section id="rooms-home" class="rooms-home" aria-labelledby="rooms-title"><header class="topbar"><div class="rooms-heading"><h1 id="rooms-title">我的房间</h1><p>选择一个房间开始看弹幕</p></div><button id="home-settings" class="icon-button" aria-label="设置与主题" title="设置与主题"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg></button><button id="add-room" class="icon-button add-room-button" aria-label="添加房间" title="添加房间">＋</button></header><div id="saved-room-list" class="saved-room-list" aria-label="已保存的房间"></div><p id="room-list-notice" class="room-list-note" role="status">房间与备注保存在此浏览器。</p></section>
+<section id="monitor-screen" class="monitor-screen" aria-label="单房间弹幕" hidden>
+
+<header class="topbar"><button id="back-rooms" class="icon-button monitor-back" aria-label="返回我的房间" title="返回我的房间"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m14 5-7 7 7 7"/></svg></button><button id="rail-toggle" class="icon-button rail-toggle" aria-label="收起房间列表" title="收起房间列表" aria-expanded="true" aria-controls="rooms-home"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg></button><button id="open-room" class="room-button" aria-label="房间信息与手机访问"><div class="room-name"><span id="room-name">斗鱼弹幕台</span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m8 5 7 7-7 7"/></svg></div><div class="room-sub"><span id="status-dot" class="status-dot"></span><span id="phase">准备就绪</span><span aria-hidden="true">·</span><span id="room-caption" class="room-caption"></span></div></button><button id="open-follows" class="icon-button" aria-label="管理特别关注" title="管理特别关注"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="9" cy="8" r="3"/><path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6m2 10v-2a6 6 0 0 0-2-4"/></svg></button><button id="open-settings" class="icon-button settings-entry" aria-label="设置与主题" title="设置与主题"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h16M4 17h16"/><circle cx="9" cy="7" r="3" fill="var(--surface)"/><circle cx="15" cy="17" r="3" fill="var(--surface)"/></svg></button></header>
+<div class="monitor-empty" role="status"><p>从左侧选择一个房间<br><small>列表可以用左上角按钮收起</small></p></div>
+<nav class="tabs" role="tablist" aria-label="页面"><button id="nav-all" class="tab" role="tab" aria-controls="page-all" aria-selected="true">全部</button><button id="nav-gifts" class="tab" role="tab" aria-controls="page-gifts" aria-selected="false" tabindex="-1">礼物</button><button id="nav-scores" class="tab" role="tab" aria-controls="page-scores" aria-selected="false" tabindex="-1" aria-label="给分">给分<span id="score-dot" class="tab-dot" aria-hidden="true" hidden></span></button><button id="nav-track" class="tab" role="tab" aria-controls="page-track" aria-selected="false" tabindex="-1">查分</button><button id="nav-coach" class="tab" role="tab" aria-controls="page-coach" aria-selected="false" tabindex="-1" aria-label="弹幕教练">教练</button><span class="tabs-caption">斗鱼弹幕台</span></nav><span id="score-status" class="visually-hidden" role="status" aria-live="polite"></span>
+<div id="transport-alert" class="transport-alert" role="status" hidden></div>
+<div id="test-banner" class="test-banner" hidden><span>测试预览 · 实时仍在接收</span><button id="test-panel">测试面板</button><button id="test-exit" aria-label="清除样例并退出测试">退出测试</button></div>
+<section id="page-all" class="page" role="tabpanel" aria-labelledby="nav-all"><div id="priority" class="priority"></div><div class="feed-wrap"><div id="chat-feed" class="feed" aria-label="全部聊天"></div><button id="new-chat" class="new-message" hidden>有新消息 ↓</button></div></section>
+<section id="page-gifts" class="page" role="tabpanel" aria-labelledby="nav-gifts" hidden><p id="gift-caption" class="gift-caption">本条参考金额从高到低</p><div class="feed-wrap"><div id="gift-feed" class="feed" aria-label="礼物记录"></div><button id="new-gift" class="new-message" hidden>回到金额最高 ↑</button></div></section>
+<section id="page-scores" class="page" role="tabpanel" aria-labelledby="nav-scores" hidden><p id="score-caption" class="gift-caption">按接收时间从早到晚</p><div class="feed-wrap"><div id="score-feed" class="feed" aria-label="给分相关聊天"></div><button id="new-score" class="new-message" hidden>有新给分消息 ↓</button></div></section>
+<section id="page-track" class="page" role="tabpanel" aria-labelledby="nav-track" hidden><div class="track-bar"><p id="track-caption" class="gift-caption">追踪列表为空</p><button id="track-add" class="track-action" aria-label="添加追踪的人">添加</button><button id="track-refresh" class="track-action" aria-label="立即刷新分数">刷新</button></div><div class="feed-wrap"><div id="track-feed" class="feed" aria-label="追踪的分数"></div></div></section>
+<section id="page-coach" class="page" role="tabpanel" aria-labelledby="nav-coach" hidden><div class="feed-wrap"><div id="coach-feed" class="feed" aria-label="弹幕教练"><p id="coach-duty" class="coach-duty" role="status">未布防</p><section class="coach-card" aria-labelledby="coach-arm-title"><h3 id="coach-arm-title">时段布防</h3><label class="setting-toggle" for="coach-armed"><span>在时段内提醒</span><input id="coach-armed" type="checkbox" role="switch" data-coach="coachArmed"></label><div class="coach-grid"><div class="field"><label for="coach-start">开始</label><input id="coach-start" type="time" step="60" required></div><div class="field"><label for="coach-end">结束</label><input id="coach-end" type="time" step="60" required></div><div class="field"><label for="coach-threshold">聚合门槛（条）</label><input id="coach-threshold" type="number" inputmode="numeric" min="5" max="500" step="1" required></div><div class="field"><label for="coach-gap">最短间隔（秒）</label><input id="coach-gap" type="number" inputmode="numeric" min="1" max="600" step="1" required></div></div><div class="button-row"><button id="coach-save" type="button" class="button primary">保存时段</button></div><p id="coach-notice" class="form-notice" role="status"></p><p class="helper">结束早于开始表示跨零点，例如 22:00 – 02:00；两个时间填成一样表示全天。门槛按合并后的总条数算，最低 5 条（不到 5 条、或只有 1 个人在刷，本来就不会聚合）。同一句话在安静满一个最短间隔之前只提醒一次，这波聚合持续多少秒都一样；不同内容之间也至少隔开这个间隔。</p></section><section class="coach-card" aria-labelledby="coach-way-title"><h3 id="coach-way-title">提醒方式</h3><label class="setting-toggle" for="coach-vibrate"><span>震动</span><input id="coach-vibrate" type="checkbox" role="switch" data-coach="coachVibrate"></label><label id="coach-sound-row" class="setting-toggle" for="coach-sound" hidden><span>提示音</span><input id="coach-sound" type="checkbox" role="switch" data-coach="coachSound"></label><div class="button-row"><button id="coach-test" type="button" class="button">试一下</button></div><div id="coach-status" class="coach-status"></div></section><section class="coach-card" aria-labelledby="coach-wake-title"><h3 id="coach-wake-title">屏幕常亮</h3><div id="coach-wake-live" hidden><label class="setting-toggle" for="coach-wake"><span>看弹幕时不自动息屏</span><input id="coach-wake" type="checkbox" role="switch" data-coach="coachWakeLock"></label><p class="helper">与布防无关，进入房间就生效；退回房间列表或切走页面时自动释放，回来再自动接上。息屏会让系统挂起页面、悄悄掐断弹幕连接，这是手机上漏消息的主要原因。回到前台时本页会立刻重连，并补齐服务端保留的最近 300 条。</p></div><p id="coach-wake-hint" class="helper" hidden></p></section><section class="coach-card" aria-labelledby="coach-log-title"><h3 id="coach-log-title">最近提醒</h3><div id="coach-log"></div></section></div></div></section>
+</section><div id="toast" class="toast" role="status" hidden></div></main>
+<dialog id="saved-room-sheet" class="sheet" aria-labelledby="saved-room-title"><div class="sheet-header"><h2 id="saved-room-title" tabindex="-1">添加房间</h2><button class="close-button" data-close aria-label="关闭房间编辑">×</button></div><div class="sheet-body"><p id="saved-room-help" class="sheet-intro room-editor-help">填写房间号或斗鱼链接，保存后点击房间进入。</p><form id="saved-room-form"><div class="field"><label for="saved-room-input">房间号或斗鱼链接</label><input id="saved-room-input" autocomplete="off" spellcheck="false" maxlength="512" placeholder="例如 231059 或 https://www.douyu.com/63136" required></div><div class="field spaced"><label for="saved-room-note">备注（可选）</label><input id="saved-room-note" autocomplete="off" maxlength="48" placeholder="例如 晚间常看"></div><button id="save-saved-room" type="submit" class="button primary full">解析并添加</button><p id="saved-room-notice" class="form-notice" role="status"></p></form><button id="remove-saved-room" type="button" class="button full remove-room-button" hidden>从我的房间移除</button></div></dialog>
+<dialog id="settings-sheet" class="sheet" aria-labelledby="settings-title"><div class="sheet-header"><h2 id="settings-title" tabindex="-1">设置与主题</h2><button class="close-button" data-close aria-label="关闭设置">×</button></div><div class="sheet-body"><div class="theme-options" role="group" aria-label="页面主题"><button type="button" class="theme-choice" data-theme-choice="dark" aria-pressed="true"><span class="theme-dark"></span>深色</button><button type="button" class="theme-choice" data-theme-choice="light" aria-pressed="false"><span class="theme-light"></span>浅色</button></div><section class="form-section" aria-labelledby="layout-title"><h3 id="layout-title">显示方式</h3><p>平板模式把房间列表常驻在左侧分栏，并可开启斗鱼原生弹幕还原。切换立即生效。</p><div class="theme-options" role="group" aria-label="显示方式"><button type="button" class="theme-choice" data-layout-choice="phone" aria-pressed="true">手机端</button><button type="button" class="theme-choice" data-layout-choice="pad" aria-pressed="false">平板端</button></div><label class="setting-toggle" for="setting-richDanmaku"><span>斗鱼原生还原（仅平板端）</span><input id="setting-richDanmaku" type="checkbox" role="switch" data-setting="richDanmaku" checked></label><p class="helper">开启后按斗鱼网页端还原排版：徽章条（贵族 / 房管 / 粉丝牌 / 用户等级）、弹幕颜色、贵族整行底色、礼物名主题橙与入场动效。手机端不受影响。</p></section><form id="logout-form" class="form-section" method="post" action="/logout"><button id="logout-button" type="submit" class="button full">退出登录</button><p class="helper">退出当前浏览器的登录，页面偏好与关注名单会保留。</p></form><section class="form-section font-section" aria-labelledby="font-label"><label id="font-label" class="font-label" for="font-size">整体字号与行距 <output id="font-size-value" for="font-size">14 px</output></label><input id="font-size" class="font-range" type="range" min="12" max="20" step="0.5" value="14" aria-describedby="font-help"><div class="range-labels" aria-hidden="true"><span>更紧凑 · 12</span><span>更舒展 · 20</span></div><div class="size-options" role="group" aria-label="字号快捷选择"><button type="button" class="button" data-font-size="12" aria-pressed="false">紧凑 12</button><button type="button" class="button" data-font-size="14" aria-pressed="true">默认 14</button><button type="button" class="button" data-font-size="18" aria-pressed="false">大字 18</button></div><div class="font-preview"><span>昵称：</span>字号越小，同屏显示越多</div><p id="font-help" class="helper">聊天、置顶行与正文立即缩放，行距一起调整。实际行数随屏幕、换行和置顶消息数量变化。</p><div id="font-notice" class="helper" role="status"></div></section><section class="form-section attention-section" aria-labelledby="attention-title"><h3 id="attention-title">置顶、高亮与提示</h3><p>开关立即保存。关闭置顶后仍继续接收，重新开启时显示当前有效内容。</p><label class="setting-toggle" for="setting-showGiftPins"><span>主页显示礼物置顶</span><input id="setting-showGiftPins" type="checkbox" role="switch" data-setting="showGiftPins" checked></label><label class="setting-toggle" for="setting-showFollowPins"><span>主页显示关注置顶</span><input id="setting-showFollowPins" type="checkbox" role="switch" data-setting="showFollowPins" checked></label><label class="setting-toggle" for="setting-showNotices"><span>显示贵宾进场提示</span><input id="setting-showNotices" type="checkbox" role="switch" data-setting="showNotices" checked></label><label class="setting-toggle" for="setting-highlightGifts"><span>礼物高亮</span><input id="setting-highlightGifts" type="checkbox" role="switch" data-setting="highlightGifts" checked></label><label class="setting-toggle" for="setting-highlightFollows"><span>关注发言高亮</span><input id="setting-highlightFollows" type="checkbox" role="switch" data-setting="highlightFollows" checked></label><label class="setting-toggle" for="setting-highlightAdmins"><span>房管 / 超管发言高亮</span><input id="setting-highlightAdmins" type="checkbox" role="switch" data-setting="highlightAdmins" checked></label><label class="setting-toggle" for="setting-highlightCrowds"><span>多人刷屏高亮</span><input id="setting-highlightCrowds" type="checkbox" role="switch" data-setting="highlightCrowds" checked></label><label class="setting-toggle" for="setting-softEffects"><span>柔和到达动效</span><input id="setting-softEffects" type="checkbox" role="switch" data-setting="softEffects" checked></label><label class="setting-toggle" for="setting-scoreNotifications"><span>给分红点提示</span><input id="setting-scoreNotifications" type="checkbox" role="switch" data-setting="scoreNotifications" checked></label><p id="attention-notice" class="helper" role="status"></p><form id="timing-form"><h3 class="section-label">发言时长</h3><div class="field-grid"><div class="field"><label for="follow-duration">关注置顶（秒）</label><input id="follow-duration" type="number" inputmode="numeric" min="1" max="86400" step="1" required></div><div class="field"><label for="crowd-wait">刷屏等待（秒）</label><input id="crowd-wait" type="number" inputmode="numeric" min="1" max="86400" step="1" required></div></div><p class="helper">关注默认停留 30 秒；多人刷屏默认等待 10 秒。均按最后一条相关发言的原接收时间计时，修改时长不重新计时。</p><button type="submit" class="button full">保存发言时长</button><p id="timing-notice" class="helper" role="status"></p></form></section><section id="custom-gifts-section" class="form-section" aria-labelledby="custom-gifts-title"><h3 id="custom-gifts-title">自定义礼物</h3><p>按消息中的完整礼物名匹配，忽略首尾空格。显示档位仅用于筛选，不代表礼物价格；每条赠送使用一次档位，不乘数量或连击。</p><form id="custom-gift-form"><div class="custom-gift-fields"><div class="field"><label for="custom-gift-name">完整礼物名</label><input id="custom-gift-name" autocomplete="off" placeholder="例如 白金独角兽" required></div><div class="field"><label for="custom-gift-tier">显示档位（元）</label><input id="custom-gift-tier" type="number" inputmode="decimal" min="0" max="100000000" step="0.01" value="100" required></div></div><div class="button-row"><button id="cancel-custom-gift" type="button" class="button" hidden>取消编辑</button><button id="save-custom-gift" type="submit" class="button primary">添加 / 更新</button></div></form><div id="custom-gift-notice" class="form-notice" role="status"></div><div id="custom-gift-list" class="custom-gift-list"></div></section><form id="settings-form"><div class="form-section"><h3>礼物置顶规则</h3><p>普通礼物按本条人民币参考总价筛选；命中自定义名称时使用显示档位。礼物页仍按原参考金额排序。</p><div class="field-grid"><div class="field"><label for="gift-threshold">最低筛选档位（元）</label><input id="gift-threshold" type="number" inputmode="decimal" min="100" max="100000000" step="0.01" required></div><div class="field"><label for="gift-maximum">最高筛选档位（元）</label><input id="gift-maximum" type="number" inputmode="decimal" min="100" max="100000000" step="0.01" placeholder="不限"></div></div><div class="field spaced"><label for="gift-duration">置顶停留（秒）</label><input id="gift-duration" type="number" inputmode="numeric" min="1" max="86400" step="1" required></div></div><p class="helper">默认 100 元档位至不限、停留 100 秒。同一人的相同礼物累加数量，各胶囊按最后一次合格赠送的原接收时间倒计时；重连不续时。未命中自定义规则的鱼丸与未知参考价礼物不进入此处。修改区间或自定义礼物时，仅按当前保留的最近 500 条礼物重算，超出范围的旧记录无法回补。</p><div class="button-row"><button id="restore-settings" type="button" class="button">恢复礼物默认</button><button type="submit" class="button primary">保存规则</button></div><div id="settings-notice" class="form-notice" role="status"></div></form><button id="open-test" type="button" class="button full">测试效果</button><p class="helper">字号、主题、规则、高亮开关与关注保留在当前浏览器的当前访问地址，查看各房间时共用。相同文字穿插出现也会合并；多人刷屏持续显示在聊天底部，最后一条相同弹幕后超过设置的刷屏等待时间消失（默认 10 秒）。点击合并行查看参与者与保留的原文。</p></div></dialog>
+<dialog id="room-sheet" class="sheet" aria-labelledby="room-title"><div class="sheet-header"><h2 id="room-title" tabindex="-1">房间信息与手机访问</h2><button class="close-button" data-close aria-label="关闭房间信息">×</button></div><div class="sheet-body"><div id="room-facts" class="room-facts"></div><div class="button-row"><button id="stop" type="button" class="button">暂停本页接收</button><button id="connect" type="button" class="button primary">重新连接</button></div><div id="room-notice" class="form-notice" role="status"></div><p class="helper">此页只接收当前房间，其他页面不受影响。返回列表或切换房间会清空本页消息，保留保存的房间、关注与显示设置。</p><h3 class="section-label">手机打开此页面</h3><p id="access-hint" class="sheet-intro">正在获取可用地址…</p><select id="share-select" class="share-select" aria-label="选择访问地址" hidden></select><div class="share-row"><input id="share-url" readonly aria-label="手机访问地址" value="正在获取…"><button id="copy-url" class="button">复制</button></div><div id="share-notice" class="sheet-toast" role="status"></div><details class="details-toggle"><summary>连接详情与记录范围</summary><p id="connection-detail"></p><p>当前房间在服务端保留最近 300 条识别消息。本页保留最多 300 条聊天展示行、最近 500 条礼物及独立的最近 500 条给分相关聊天。给分页只归集正文以 #给目标 数量 或 #炸目标 数量 开头的聊天，带昵称引用的转发只留在全部页；不计算或执行指令。刷新只能重建服务端仍有的记录；关闭程序后历史消失。</p></details></div></dialog>
+<dialog id="follows-sheet" class="sheet" aria-labelledby="follows-title"><div class="sheet-header"><h2 id="follows-title" tabindex="-1">管理特别关注</h2><button class="close-button" data-close aria-label="关闭关注管理">×</button></div><div class="sheet-body"><p class="sheet-intro">按 UID 关注。最新发言显示在聊天上方，最近说话的人排在最前，最多显示 5 位；默认 30 秒后退出置顶，可在设置调整。关注名单可以超过 5 人。</p><form id="follow-form"><div class="field"><label for="follow-uid">用户 UID</label><input id="follow-uid" inputmode="numeric" autocomplete="off" maxlength="24" pattern="[0-9]+" placeholder="输入数字 UID" required></div><div class="field spaced"><label for="follow-label">备注（可选）</label><input id="follow-label" maxlength="24" autocomplete="off" placeholder="给这个 UID 留个备注"></div><button type="submit" class="button primary full">添加 / 更新关注</button><div id="follow-notice" class="form-notice" role="status"></div></form><h3 id="follow-list-title" class="section-label"></h3><div id="follow-list"></div><p class="helper">每人置顶一行最新发言，有效期内相同文字连续出现只累计次数。第 6 位发言会换出最久未说话的人；过期只移出置顶，关注名单与可用聊天保留。再次发言从新一轮计数。</p></div></dialog>
+<dialog id="track-sheet" class="sheet" aria-labelledby="track-title"><div class="sheet-header"><h2 id="track-title" tabindex="-1">追踪谁的分</h2><button class="close-button" data-close aria-label="关闭追踪名单">×</button></div><div class="sheet-body"><p class="sheet-intro">这是查分站上的全部主播，点一下加入追踪，再点一下移出。</p><form id="track-form"><div class="field"><label for="track-keyword">筛选</label><input id="track-keyword" autocomplete="off" maxlength="32" placeholder="昵称、给分简称或 UID"></div></form><div id="track-notice" class="form-notice" role="status"></div><div id="track-results"></div><p class="helper">切到查分页时每分钟自动刷新一次，离开这一页就停下来，不会一直占着网络。查分站自己也是约每分钟换一次数，刷得更勤没有意义。</p></div></dialog>
+<dialog id="test-sheet" class="sheet" aria-labelledby="test-title"><div class="sheet-header"><h2 id="test-title" tabindex="-1">测试效果</h2><button class="close-button" data-close aria-label="关闭测试面板">×</button></div><div class="sheet-body"><p class="sheet-intro">点击下方按钮，进入独立的本地测试预览。样例均标记“测试”，不会发到直播间；实时弹幕继续在后台接收，退出后恢复。</p><p id="test-state" class="test-state"></p><div class="test-actions"><button id="test-chat" type="button" class="button">普通聊天 · 40 条</button><button id="test-follow" type="button" class="button">关注发言 · 轮流</button><button id="test-admin" type="button" class="button">房管发言</button><button id="test-gift" type="button" class="button">礼物胶囊 · 200 续送</button><button id="test-custom-gift" type="button" class="button">白金独角兽 · 未知价</button><button id="test-notice" type="button" class="button">贵宾进场提示</button><button id="test-crowd" type="button" class="button">穿插刷屏 · 续时</button><button id="test-scores" type="button" class="button">给分指令</button></div><p class="helper">关注按钮轮流使用已保存的关注，观察最新发言置顶；没有关注时使用临时演示身份。礼物按钮每次让两人各送 200 个测试蛋；第二次起，甲再送一枚火箭，显示独立倒计时。低于门槛样例仅留在礼物页，连击不计入数量。白金独角兽按钮每次生成 1 个参考价未知的测试礼物；默认显示档位为 100，重复点击可累加并续时。样例 ID 与样例金额仅为本地测试数据。贵宾进场提示按钮一次生成五档贵族与房管、超管进场；pad 原生还原下可比对斗鱼的进场底色，关掉「显示贵宾进场提示」后整批隐藏。钻粉进场与升级播报已整体移除，服务端就不再下发。比较行数时，可先清空再生成普通聊天。穿插刷屏混入其他弹幕；在设置的等待时间内再点可续时，最后一条后开始计时（默认 10 秒）。给分样例同时含直接指令、带昵称引用与普通、不完整聊天；引用只留在全部页，可观察给分页归集与红点。</p><div class="button-row"><button id="test-clear" type="button" class="button">清空测试</button><button id="test-return" type="button" class="button primary">退出测试</button></div></div></dialog>
+<dialog id="user-sheet" class="sheet" aria-labelledby="user-title"><div class="sheet-header"><h2 id="user-title" tabindex="-1">用户与消息</h2><button class="close-button" data-close aria-label="关闭用户">×</button></div><div class="sheet-body"><div id="user-meta"></div><div id="user-name" class="user-name-large"></div><div class="uid-line"><span id="user-uid"></span><button id="copy-uid">复制 UID</button></div><form id="user-follow-form"><label for="user-label" class="field-label">关注备注（可选）</label><input id="user-label" maxlength="24" autocomplete="off" placeholder="给这个 UID 留个备注"><div class="button-row"><button id="user-follow-toggle" type="submit" class="button primary">特别关注</button><button id="user-unfollow" type="button" class="button" hidden>取消关注</button></div><div id="user-notice" class="sheet-toast" role="status"></div></form><h3 class="section-label">可用的聊天记录</h3><p id="user-history-note" class="helper"></p><div id="user-history"></div></div></dialog>
+<dialog id="detail-sheet" class="sheet" aria-labelledby="detail-title"><div class="sheet-header"><h2 id="detail-title" tabindex="-1">消息详情</h2><button class="close-button" data-close aria-label="关闭消息详情">×</button></div><div id="detail-body" class="sheet-body"></div></dialog>
+<script>
+
+'use strict';
+const $=id=>document.getElementById(id);
+const make=(tag,cls,text)=>{const el=document.createElement(tag);if(cls)el.className=cls;if(text!==undefined)el.textContent=String(text);return el;};
+function patchText(node,value){const text=String(value);if(node.textContent!==text)node.textContent=text;}
+function patchAttribute(node,name,value){const text=String(value);if(node.getAttribute(name)!==text)node.setAttribute(name,text);}
+function patchData(node,name,value){const text=String(value);if(node.dataset[name]!==text)node.dataset[name]=text;}
+function renderKeyed(parent,items,keyOf,patch){
+  const keys=items.map(keyOf),wanted=new Set(keys),existing=new Map();
+  // 先删后插：满容量时的普通追加才不会挪动每一个幸存行。
+  for(const node of [...parent.children]){if(wanted.has(node._renderKey))existing.set(node._renderKey,node);else node.remove();}
+  let cursor=parent.firstElementChild;
+  for(let i=0;i<items.length;i++){
+    const node=patch(items[i],existing.get(keys[i]));node._renderKey=keys[i];
+    if(node===cursor){cursor=cursor.nextElementSibling;continue;}
+    if(node.parentElement===parent&&parent.moveBefore)parent.moveBefore(node,cursor);
+    else{
+      const moving=!!node.parentElement,focused=moving&&node.contains(document.activeElement)?document.activeElement:null,selection=moving?document.getSelection?.():null;
+      const selected=selection?.anchorNode&&(node.contains(selection.anchorNode)||node.contains(selection.focusNode))?[selection.anchorNode,selection.anchorOffset,selection.focusNode,selection.focusOffset]:null;
+      parent.insertBefore(node,cursor);
+      if(focused&&document.activeElement!==focused)focused.focus({preventScroll:true});
+      if(selected)selection.setBaseAndExtent(...selected);
+    }
+  }
+}
+function patchRepeat(line,count,prefix){
+  if(count>1){if(!line._repeat){line._repeat=make('span','repeat');line.append(line._repeat);}patchText(line._repeat,prefix+count);}
+  else if(line._repeat){line._repeat.remove();line._repeat=null;}
+}
+
+// 纯函数：原文从不改写，只有显示与分组用 cleanText。
+const MARK=/\p{M}/u,BASE=/[\p{L}\p{N}\p{S}]/u,PICTURE=/\p{Extended_Pictographic}/u;
+const JOINING=/[\p{Script=Arabic}\p{Script=Syriac}\p{Script=Devanagari}\p{Script=Bengali}\p{Script=Gurmukhi}\p{Script=Gujarati}\p{Script=Oriya}\p{Script=Tamil}\p{Script=Telugu}\p{Script=Kannada}\p{Script=Malayalam}\p{Script=Sinhala}\p{Script=Myanmar}\p{Script=Khmer}]/u;
+const VARIATION=/[\uFE00-\uFE0F\u{E0100}-\u{E01EF}]/u,MODIFIER=/[\u{1F3FB}-\u{1F3FF}]/u;
+function cleanText(value){
+  const chars=Array.from(String(value??'').normalize('NFC').replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F\u007F-\u009F\u00AD\u034F\u061C\u180E\u200B\u200E\u200F\u202A-\u202E\u2060-\u206F\uFEFF]/gu,''));
+  let out='',base=false,marks=0,previous='',same=0;
+  for(let i=0;i<chars.length;i++){
+    const ch=chars[i];
+    if(ch==='\u200D'||ch==='\u200C'){
+      let p=i-1;while(p>=0&&(MARK.test(chars[p])||MODIFIER.test(chars[p])))p--;
+      const before=chars[p]||'',after=chars[i+1]||'';
+      if((ch==='\u200D'&&PICTURE.test(before)&&PICTURE.test(after))||(JOINING.test(before)&&JOINING.test(after)))out+=ch;
+      continue;
+    }
+    if(MARK.test(ch)){
+      same=ch===previous?same+1:1;previous=ch;
+      if(base&&marks<8&&same<=(VARIATION.test(ch)?1:2)){out+=ch;marks++;}
+      continue;
+    }
+    out+=ch;base=BASE.test(ch);marks=0;previous='';same=0;
+  }
+  return out.replace(/\s+/gu,' ').trim();
+}
+function normalizeUID(value){const uid=String(value??'').trim();if(!/^\d{1,24}$/.test(uid))return '';const normalized=uid.replace(/^0+(?=\d)/,'');return normalized==='0'?'':normalized;}
+const eventCache=new WeakMap();
+function eventData(e){
+  let data=eventCache.get(e);
+  if(!data){data={key:[e.roomId||'',e.generation||'',e.kind,e.index,e.at].join('|'),at:Date.parse(e.at),index:Number(e.index)||0,uid:normalizeUID(e.userId),text:cleanText(e.text),name:cleanText(e.user)||'匿名用户',gift:cleanText(e.gift)};eventCache.set(e,data);}
+  return data;
+}
+function eventKey(e){return eventData(e).key;}
+// 背包道具（粉丝荧光棒、赞……）标了单价但送出不扣钱。名义额只留给详情页，
+// amountOf 一律不认，排序、分档、飘屏阈值和合计都不被它撑起来。
+function propOf(e){return e.kind==='gift'&&e.giftReference?.prop===true?e.giftReference:null;}
+function nominalOf(r){if(r?.currency!=='YUCHI')return null;const raw=r.nominalAmount;if(raw===undefined||raw===null||String(raw).trim()==='')return null;const n=Number(raw);return Number.isFinite(n)&&n>=0?n:null;}
+function amountOf(e){if(e.kind!=='gift'||propOf(e))return null;return nominalOf(e.giftReference);}
+function compareNewest(a,b){return eventData(b).at-eventData(a).at||eventData(b).index-eventData(a).index||eventKey(b).localeCompare(eventKey(a));}
+function compareGifts(a,b){const av=amountOf(a),bv=amountOf(b);return av===null?(bv===null?compareNewest(a,b):1):bv===null?-1:bv-av||compareNewest(a,b);}
+function giftDisplayTier(e,rules){if(e.kind!=='gift')return null;const name=String(e.gift??'').trim(),custom=rules.customGifts?.find(rule=>rule.name===name);return custom?custom.tier:amountOf(e);}
+function giftExpiry(e,rules){const value=giftDisplayTier(e,rules),at=eventData(e).at;return value!==null&&value>=rules.giftThreshold&&(rules.giftMaximum===null||value<=rules.giftMaximum)&&Number.isFinite(at)?at+rules.giftDuration*1000:null;}
+const ATTENTION_KEYS=['showGiftPins','showFollowPins','showNotices','highlightGifts','highlightFollows','highlightAdmins','highlightCrowds','softEffects','scoreNotifications'];
+function validCustomGifts(value){
+  const rules=new Map();for(const rule of Array.isArray(value)?value:[]){const name=typeof rule?.name==='string'?rule.name.trim():'',tier=Number(rule?.tier);if(name&&String(rule?.tier??'').trim()&&Number.isFinite(tier)&&tier>=0&&tier<=100000000)rules.set(name,{name,tier});}return [...rules.values()];
+}
+// HH:MM ↔ 当天第几分钟，跨零点靠比较两个分钟数判断。
+const CLOCK=/^([01]?[0-9]|2[0-3]):([0-5][0-9])$/;
+const clockMinutes=value=>{const m=CLOCK.exec(String(value??'').trim());return m?Number(m[1])*60+Number(m[2]):null;};
+const clockText=minutes=>String(Math.floor(minutes/60)).padStart(2,'0')+':'+String(minutes%60).padStart(2,'0');
+function validSettings(value){
+  const result={giftThreshold:100,giftMaximum:null,giftDuration:100,followPinDuration:30,crowdWait:10,theme:'dark',fontSize:14,customGifts:Object.prototype.hasOwnProperty.call(value??{},'customGifts')?validCustomGifts(value.customGifts):[{name:'白金独角兽',tier:100}]};
+  for(const key of ATTENTION_KEYS)result[key]=typeof value?.[key]==='boolean'?value[key]:true;
+  const minimum=Number(value?.giftThreshold),duration=Number(value?.giftDuration),maximum=value?.giftMaximum;
+  if(value?.giftThreshold!==undefined&&Number.isFinite(minimum)&&minimum>=0&&minimum<=100000000)result.giftThreshold=Math.max(100,minimum);
+  if(Number.isInteger(duration)&&duration>=1&&duration<=86400)result.giftDuration=duration;
+  if(maximum!==undefined&&maximum!==null&&maximum!==''&&Number.isFinite(Number(maximum))&&Number(maximum)>=result.giftThreshold&&Number(maximum)<=100000000)result.giftMaximum=Number(maximum);
+  for(const key of ['followPinDuration','crowdWait']){const seconds=Number(value?.[key]);if(Number.isInteger(seconds)&&seconds>=1&&seconds<=86400)result[key]=seconds;}
+  if(value?.theme==='light')result.theme='light';
+  // 布局：登录页选定后写在同一份设置里；pad 下默认开原生还原、默认展开左栏。
+  result.layout=value?.layout==='pad'?'pad':'phone';
+  result.railOpen=value?.railOpen!==false;
+  result.richDanmaku=value?.richDanmaku!==false;
+  const fontSize=Number(value?.fontSize);if(Number.isFinite(fontSize)&&fontSize>=12&&fontSize<=20)result.fontSize=Math.round(fontSize*2)/2;
+  // 弹幕教练：布防默认关闭，其余给出可直接用的默认值。
+  result.coachArmed=value?.coachArmed===true;result.coachSound=value?.coachSound===true;
+  for(const key of ['coachVibrate','coachWakeLock'])result[key]=typeof value?.[key]==='boolean'?value[key]:true;
+  for(const [key,fallback] of [['coachStart','20:00'],['coachEnd','23:59']]){const minutes=clockMinutes(value?.[key]);result[key]=minutes===null?fallback:clockText(minutes);}
+  for(const [key,fallback,low,high] of [['coachThreshold',8,5,500],['coachGap',60,1,600]]){const n=Number(value?.[key]);result[key]=Number.isInteger(n)&&n>=low&&n<=high?n:fallback;}
+  return result;
+}
+// 偏好与房间级状态。
+const ROOMS_KEY='douyu-danmaku.rooms.v1';
+const SETTINGS_KEY='douyu-danmaku.settings.v3',OLD_SETTINGS_KEY='douyu-danmaku.settings.v2',FOLLOWS_KEY='douyu-danmaku.follows.v2',TRACK_KEY='douyu-danmaku.track.v1';
+const MAX_ROWS=300,MAX_ORIGINALS=300,MAX_GIFTS=500,MAX_SCORES=500,MAX_PINS=100,MAX_NOTICES=60;
+// 贵宾进场：斗鱼也是把它画成一条系统提示插在弹幕流里。服务端只放行贵族与房管/超管。
+const PAGES=['all','gifts','scores','track','coach'];
+// 查分：经本机 /api/scoreboard 代理，上游没有 CORS 头。
+// 上游约 60 秒换一次数，轮询同步到 60 秒，且只在查分页可见时跑。
+const TRACK_POLL_MS=60000,TRACK_MAX=60;
+const GIFT_REFILTER_NOTICE='已按当前保留的最近 500 条礼物重算胶囊；更早记录无法回补，按原接收时间计时。测试预览单独重算。';
+const crowdWindowMs=()=>settings.crowdWait*1000;
+const followExpiry=info=>eventData(info.event).at+settings.followPinDuration*1000;
+// 昵称打头的引用仍算普通聊天；真命令出现在归一化正文的开头。
+const SCORE_COMMAND=/^#(?:给|炸)[^\s#]+\s+[0-9]+(?=$|[\s。!?！？;；)）\]】"”'’])/u;
+const isScoreCommand=text=>SCORE_COMMAND.test(cleanText(text).normalize('NFKC'));
+const compareScores=(a,b)=>eventData(a).at-eventData(b).at;
+// 回执与 #给 命令按「送出者+金额+时间窗口」配对，简称表只用于同额多条时消歧。
+const SCORE_BOT='别问问就小白',SCORE_MATCH_MS=180000,SCORE_PENDING_MS=60000;
+const SCORE_COMMAND_PARTS=/^#(给|炸)([^\s#]+?)(每人)?\s+([0-9]+)(?=$|[\s。!?！？;；)）\]】"”'’])/u;
+const SCORE_TEAM=/^(?:红|蓝|红A|红B|蓝A|蓝B|阿飞|抹茶|冬瓜强|刘頔)队(?:队员)?$/u;
+// 两种回执：「赠予 N Rush币给」与「炸了 N Rush币」。
+// 剩余值后面偶尔跟杂字符（见过 "剩余:21六"），余额段一律吃到 】 为止，不解析。
+const SCORE_RECEIPT=/【([^】]+?)[/／]剩余[:：]?[^】]*】\s*(赠予|炸了)\s*([0-9]+)\s*[^【】]*?【([^】]+?)[/／]剩余[:：]?[^】]*】/u;
+const SCORE_ALIASES=new Map([["冬瓜","冬瓜"],["刘頔","刘頔"],["米娜","米娜"],["年鹏","XROCK年鹏Enpi"],["阿飞","阿飞"],["抹茶","抹茶"],["童猪","童猪"],["大谋","王大谋"],["黑皮","别问问就黑皮"],["糯糯","糯糯p"],["瑶瑶","一凹瑶wa"],["玩蛇","玩蛇姐姐"],["余初九","余初九"],["涂涂","涂涂吃饱了"],["小欣欣","小欣欣7v7"],["白小帅","白小帅"],["小杰","新来的小杰"],["苏袜","苏袜酱"],["美伢","美伢Mya"],["uu鱼","uu鱼吖"],["光阴","光阴大人"],["奶盖","奶盖Effy"],["罗一可","罗一可o"],["糕糕","糕糕睡不醒"],["芷芷","芷芷QwQ"],["豆豆","一颗豆豆iu"],["瑶瑶牙","瑶瑶牙i"],["布拉","bulaQoQ"],["咩咩","羊咩咩ee"],["礼礼","礼礼椰"],["小猫","地狱小猫"],["圆圆","圆圆子"],["晚凝","沈晚凝"],["小鱼","小鱼籽丫"],["馨儿","馨儿"],["可可","可可"],["李李","李李超欧"],["怼怼","王怼怼"],["余想","余想"],["朱丽叶","i朱丽叶"],["理理","我是理理y"]]);
+const parseScoreParts=text=>{const m=SCORE_COMMAND_PARTS.exec(text);return m?{action:m[1],target:m[2],bulk:!!m[3]||SCORE_TEAM.test(m[2]),amount:Number(m[4])}:null;};
+const scoreParts=text=>parseScoreParts(cleanText(text).normalize('NFKC'));
+function eventScoreCommand(e){const data=eventData(e);return data.scoreCommand??=(SCORE_COMMAND.test(data.normalized??=data.text.normalize('NFKC')));}
+function eventScoreParts(e){const data=eventData(e);if(data.scoreParts===undefined)data.scoreParts=parseScoreParts(data.normalized??=data.text.normalize('NFKC'));return data.scoreParts;}
+const scoreReceipt=text=>{const m=SCORE_RECEIPT.exec(cleanText(text).normalize('NFKC'));return m?{sender:m[1].trim(),action:m[2]==='炸了'?'炸':'给',amount:Number(m[3]),receiver:m[4].trim()}:null;};
+const scoreTargetHits=(target,receiver)=>{const full=SCORE_ALIASES.get(target)||target;return receiver===full||receiver===target||receiver.includes(full)||receiver.includes(target);};
+const PHASES={idle:'准备就绪',resolving:'查询房间',connecting:'连接中',logging_in:'连接中',connected:'正在接收',reconnecting:'正在重连',stopped:'已停止',error:'连接失败'};
+function readLocal(key,fallback){try{const raw=localStorage.getItem(key);return raw?JSON.parse(raw):fallback;}catch(_){return fallback;}}
+function writeLocal(key,value){try{localStorage.setItem(key,JSON.stringify(value));return true;}catch(_){return false;}}
+let settings=validSettings(readLocal(SETTINGS_KEY,null)||readLocal(OLD_SETTINGS_KEY,{}));
+writeLocal(SETTINGS_KEY,settings);
+const savedFollows=readLocal(FOLLOWS_KEY,[]);
+const follows=new Map((Array.isArray(savedFollows)?savedFollows:[]).filter(v=>v&&normalizeUID(v.uid)).map(v=>[normalizeUID(v.uid),{uid:normalizeUID(v.uid),label:String(v.label||'').slice(0,24)}]));
+const savedTrack=readLocal(TRACK_KEY,[]);
+const trackList=new Map((Array.isArray(savedTrack)?savedTrack:[]).filter(v=>v&&normalizeUID(v.uid)).slice(0,TRACK_MAX).map(v=>[normalizeUID(v.uid),{uid:normalizeUID(v.uid),label:String(v.label||'').slice(0,32)}]));
+let trackAnchors=new Map(),trackDelta=new Map(),trackStamp='',trackAt=0,trackBusy=false,trackNote='',trackTimer=0;
+let room={},roomID='',status={},view='all',currentUser=null,history=[],notices=[],seen=new Set(),seenOrder=[],chatGroups=new Map(),giftRecords=new Map(),scoreRecords=new Map(),scoreChecks=new Map(),giftCapsules=new Map(),followCards=new Map(),sequence=0,renderTimer=0,toastTimer=0,accessLoaded=false;
+let chatRows=[],giftRows=[],scoreRows=[],activePins=[],activeFollowPins=[],preview=null,pendingScrollRestore=null,testSequence=0,chatExpiryTimer=0,giftCountdownTimer=0,scoreExpiryTimer=0;
+let savedRooms=[],roomListStorageOK=true,editingRoomID='',roomSaveGeneration=0,roomResolveController=null,currentScreen='home',monitorSelection=null;
+let stream=null,subscriptionVersion=0,roomGeneration=null,monitorWantsConnection=false,selectionResolveController=null;
+let chatFeedDirty=true,priorityDirty=true,giftFeedDirty=true,scoreFeedDirty=true;
+const RENDER_GAP_MS=50;
+let renderFrame=0,renderDue=0,nextRenderAt=0,renderGap=RENDER_GAP_MS,renderScheduleVersion=0;
+let editingCustomGiftName=null;
+const blankPageState=()=>({all:{live:true,snapshot:null,newMessages:false},gifts:{live:true,snapshot:null,newMessages:false},scores:{live:true,snapshot:null,newMessages:false,unread:false},track:{live:true,snapshot:null,newMessages:false},coach:{live:false,snapshot:null,newMessages:false}});
+let pageState=blankPageState();
+const uidOf=e=>eventData(e).uid;
+const followed=e=>(e.isTest?preview?.follows:follows)?.has(uidOf(e))||false;
+const isAdmin=e=>!!(e.userMeta?.roomAdmin||e.userMeta?.platformAdmin);
+const money=n=>n.toLocaleString('zh-CN',{minimumFractionDigits:Number.isInteger(n)?0:2,maximumFractionDigits:2});
+const timeFormatter=new Intl.DateTimeFormat('zh-CN',{hour12:false,hour:'2-digit',minute:'2-digit',second:'2-digit'});
+const timeLabel=value=>{const date=new Date(value);return Number.isNaN(date.getTime())?'—':timeFormatter.format(date);};
+const feedOf=page=>$(page==='all'?'chat-feed':page==='gifts'?'gift-feed':page==='track'?'track-feed':page==='coach'?'coach-feed':'score-feed');
+const safeName=e=>eventData(e).name;
+function amountLabel(e){
+  const amount=amountOf(e);if(amount!==null)return '参考 ¥'+money(amount);
+  // 孵化产物没有 ID 可查价，钱已记在触发它的那条上。
+  if(e.triggeredBy)return '由 '+e.triggeredBy+' 触发 · 已计入';
+  const prop=propOf(e);
+  if(prop){const nominal=nominalOf(prop);return '道具'+(nominal!==null?' · 名义 ¥'+money(nominal):'')+(prop.devote>0?' · 贡献 '+prop.devote:'')+' · 不计营收';}
+  const r=e.giftReference;if(r?.currency==='YUWAN'){const total=Number(r.unitPrice)*Number(r.count);return Number.isFinite(total)&&total>=0?money(total)+' 鱼丸':'鱼丸 · 单价未知';}
+  return '参考价未知';
+}
+const giftText=e=>'送出 '+(eventData(e).gift||('礼物 '+(e.giftId||'')))+' ×'+(e.count||'1');
+const GIFT_SOURCES={'douyu-room-catalog-v5':'斗鱼房间目录 v5','douyu-room-catalog':'斗鱼房间目录','douyu-prop-config':'斗鱼全站道具配置'};
+function validSavedRooms(value){
+  const entries=new Map();for(const entry of Array.isArray(value)?value:[]){const id=normalizeUID(entry?.id);if(id&&!entries.has(id))entries.set(id,{id,resolved:entry.resolved===true,note:cleanText(entry.note).slice(0,48),name:cleanText(entry.name).slice(0,100),owner:cleanText(entry.owner).slice(0,48)});}return [...entries.values()];
+}
+function readSavedRooms(initialize=false){
+  if(!roomListStorageOK)return savedRooms;
+  try{const raw=localStorage.getItem(ROOMS_KEY);if(raw===null){const entries=initialize?[{id:'231059',resolved:false,note:'',name:'',owner:''},{id:'63136',resolved:false,note:'',name:'',owner:''}]:[];if(initialize){savedRooms=entries;roomListStorageOK=writeLocal(ROOMS_KEY,entries);}return entries;}return validSavedRooms(JSON.parse(raw));}
+  catch(_){roomListStorageOK=false;return initialize?[{id:'231059',resolved:false,note:'',name:'',owner:''},{id:'63136',resolved:false,note:'',name:'',owner:''}]:savedRooms;}
+}
+function persistSavedRooms(entries){savedRooms=validSavedRooms(entries);roomListStorageOK=writeLocal(ROOMS_KEY,savedRooms);renderSavedRooms();return roomListStorageOK;}
+function renderSavedRooms(){
+  const list=$('saved-room-list');list.replaceChildren();
+  if(!savedRooms.length){const empty=make('div','rooms-empty');empty.append(make('p','','还没有房间'),make('small','','点击右上角 ＋ 添加'));list.append(empty);return;}
+  for(const entry of savedRooms){
+    const row=make('div','saved-room-row'),open=make('button','saved-room-open'),edit=make('button','saved-room-edit','⋯');row.dataset.roomId=entry.id;if(monitorSelection?.id===entry.id)row.dataset.active='1';open.type='button';edit.type='button';
+    open.append(make('strong','',entry.note||entry.name||('房间 '+entry.id)),make('small','','房间 '+entry.id+[entry.note?entry.name:'',entry.owner].filter(Boolean).map(value=>' · '+value).join('')));
+    open.setAttribute('aria-label','进入 '+(entry.note||entry.name||'房间')+'，房间 '+entry.id);open.addEventListener('click',()=>enterSavedRoom(entry));edit.setAttribute('aria-label','编辑房间 '+entry.id+' 的备注');edit.addEventListener('click',()=>openSavedRoomEditor(entry.id));row.append(open,edit);list.append(row);
+  }
+}
+function cancelRoomResolve(){roomSaveGeneration++;roomResolveController?.abort();roomResolveController=null;$('save-saved-room').disabled=false;}
+function openSavedRoomEditor(id=''){
+  cancelRoomResolve();savedRooms=readSavedRooms();const entry=id?savedRooms.find(item=>item.id===id):null;if(id&&!entry){renderSavedRooms();toast('该房间已从列表移除');return;}
+  editingRoomID=entry?.id||'';$('saved-room-form').reset();$('saved-room-title').textContent=entry?'编辑房间备注':'添加房间';$('saved-room-input').value=entry?.id||'';$('saved-room-input').readOnly=!!entry;$('saved-room-note').value=entry?.note||'';$('save-saved-room').textContent=entry?'保存备注':'解析并添加';$('remove-saved-room').hidden=!entry;$('saved-room-notice').textContent='';$('saved-room-help').textContent=entry?'修改备注，或从列表移除此房间。':'填写房间号或斗鱼链接，保存后点击房间进入。';openSheet('saved-room-sheet');
+}
+async function saveSavedRoom(event){
+  event.preventDefault();const input=$('saved-room-input').value.trim(),note=cleanText($('saved-room-note').value).slice(0,48),editing=editingRoomID;if(!input)return;
+  cancelRoomResolve();const generation=roomSaveGeneration,controller=new AbortController();roomResolveController=controller;$('save-saved-room').disabled=true;$('saved-room-notice').textContent=editing?'正在保存…':'正在查询房间…';
+  try{
+    const resolved=editing?{id:editing}:await resolveSavedRoomInput(input,controller.signal);if(generation!==roomSaveGeneration||!$('saved-room-sheet').open)return;
+    const id=normalizeUID(resolved.id);if(!id)throw new Error('没有取得有效房间号');const entries=readSavedRooms(),position=entries.findIndex(item=>item.id===id),previous=position>=0?entries[position]:null;if(editing&&!previous)throw new Error('该房间已在另一页面移除，请重新添加。');
+    const entry={id,resolved:editing?previous.resolved:true,note:editing?note:note||previous?.note||'',name:cleanText(resolved.name||previous?.name||'').slice(0,100),owner:cleanText(resolved.owner||previous?.owner||'').slice(0,48)};if(position>=0)entries[position]=entry;else entries.push(entry);const saved=persistSavedRooms(entries);refreshMonitorLabel();closeSheets();$('room-list-notice').textContent=(editing?'备注已保存。':previous?'房间已在列表中，信息已更新。':'房间已添加，点击即可进入。')+(saved?'':'浏览器未允许持久保存，本页仍可使用。');
+  }catch(error){if(generation===roomSaveGeneration&&error.name!=='AbortError')$('saved-room-notice').textContent=error.message;}
+  finally{if(generation===roomSaveGeneration){roomResolveController=null;$('save-saved-room').disabled=false;}}
+}
+function removeSavedRoom(){
+  const id=editingRoomID;if(!id)return;cancelRoomResolve();const saved=persistSavedRooms(readSavedRooms().filter(entry=>entry.id!==id));closeSheets();$('room-list-notice').textContent='已从我的房间移除。'+(saved?'':'浏览器未允许持久保存，本页仍可使用。');
+}
+function refreshMonitorLabel(){
+  if(!monitorSelection)return;const saved=savedRooms.find(entry=>entry.id===monitorSelection.id);if(saved)monitorSelection={...monitorSelection,...saved};$('room-name').textContent=monitorSelection.note||cleanText(room.name)||monitorSelection.name||('房间 '+monitorSelection.id);$('room-name').title=[monitorSelection.note,cleanText(room.name)||monitorSelection.name,'房间 '+monitorSelection.id].filter(Boolean).join(' · ');
+}
+function rememberSavedRoomMetadata(info){
+  const id=normalizeUID(info?.id);if(!id)return;const entries=readSavedRooms(),index=entries.findIndex(entry=>entry.id===id);if(index<0)return;const next={...entries[index],name:cleanText(info.name||entries[index].name).slice(0,100),owner:cleanText(info.owner||entries[index].owner).slice(0,48)};if(next.name!==entries[index].name||next.owner!==entries[index].owner){entries[index]=next;persistSavedRooms(entries);}refreshMonitorLabel();
+}
+// pad 分栏：两屏并存，窄视口下由 :root[data-screen] 选一屏；手机模式仍是 hidden 互斥。
+function applyLayout(){
+  const root=document.documentElement,pad=settings.layout==='pad';
+  root.dataset.layout=settings.layout;root.dataset.rich=pad&&settings.richDanmaku?'on':'off';
+  root.dataset.rail=settings.railOpen?'open':'collapsed';root.dataset.screen=currentScreen;
+  $('rooms-home').hidden=pad?false:currentScreen!=='home';
+  $('monitor-screen').hidden=pad?false:currentScreen!=='monitor';
+  patchData($('monitor-screen'),'room',monitorSelection?'live':'none');
+  const toggle=$('rail-toggle');patchAttribute(toggle,'aria-expanded',String(settings.railOpen));
+  patchAttribute(toggle,'aria-label',settings.railOpen?'收起房间列表':'展开房间列表');toggle.title=settings.railOpen?'收起房间列表':'展开房间列表';
+  // 原生图标只在 pad 原生模式建，切模式要让在屏的徽章跟着换。
+  if(nativeIcons)ageBadges();
+  document.querySelectorAll('[data-layout-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layoutChoice===settings.layout)));
+  renderSavedRooms();
+}
+function changeLayout(value){settings=validSettings({...settings,layout:value});applyLayout();dirtyHistoryFeeds();scheduleRender();const saved=writeLocal(SETTINGS_KEY,settings);$('settings-notice').textContent=saved?'显示方式已保存。':'本次页面已生效；浏览器未允许保存。';}
+function toggleRail(){settings=validSettings({...settings,railOpen:!settings.railOpen});applyLayout();writeLocal(SETTINGS_KEY,settings);}
+function applyTheme(){document.documentElement.dataset.theme=settings.theme;document.querySelector('meta[name="theme-color"]').content=settings.theme==='dark'?'#141619':'#fafafb';document.querySelectorAll('[data-theme-choice]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.themeChoice===settings.theme)));
+  // 等级图标分 web-light / web-dark 两套，换主题要重画徽章条。
+  if(nativeIcons)ageBadges();}
+function applyFontSize(preserve=true){
+  if(preserve)tickExpiries();const snapshot=preserve?captureScroll(view):null;document.documentElement.style.setProperty('--content-size',settings.fontSize+'px');
+  $('font-size').value=settings.fontSize;$('font-size-value').value=settings.fontSize+' px';$('font-size').setAttribute('aria-valuetext',settings.fontSize+' 像素');
+  document.querySelectorAll('[data-font-size]').forEach(button=>button.setAttribute('aria-pressed',String(Number(button.dataset.fontSize)===settings.fontSize)));
+  if(snapshot){restoreScroll(view,snapshot);updateNewButtons();}
+}
+function changeFontSize(value){settings=validSettings({...settings,fontSize:value});applyFontSize();const saved=writeLocal(SETTINGS_KEY,settings);$('font-notice').textContent=saved?'已立即应用并保存。':'本次页面已生效；浏览器未允许保存。';}
+// 档位边界照抄原配置：粉丝牌每 5 级一档（0 档灰牌），用户等级每 10 级一档、lv1-14 同档。
+const fansTier=n=>(n<1?0:Math.min(6,Math.ceil(n/5)));
+const levelTier=n=>(n<15?1:n<30?2:Math.min(15,Math.floor(n/10)));
+const nobleOf=e=>e.userMeta?.noble?.level||'';
+// 弹幕颜色：协议字段 col 直传，映射是 barrageColor = col - 1。
+const colOf=e=>{const c=Number(e.fields?.col);return Number.isInteger(c)&&c>=1&&c<=6?c:'';};
+// 原生图标由 /api/icons 宣布可用后才挂，图经 Go 端代理缓存，页面只连本机。
+// 不可用时一张都不请求，徽章保持 CSS 自绘。
+let nativeIcons=null,badgeAge=0;
+// 徽章内容变了而消息对象没变时推进代数，在屏的行才会重画。
+function ageBadges(){badgeAge++;dirtyHistoryFeeds();scheduleRender();}
+async function loadIcons(){
+  try{
+    const response=await apiFetch('/api/icons');if(!response.ok)return;
+    const info=await response.json();if(!info?.ready)return;
+    nativeIcons={noble:new Set(Array.isArray(info.noble)?info.noble:[]),levelMax:Number(info.levelMax)||0,medalMax:Number(info.medalMax)||0};
+    ageBadges();
+  }catch(_){}
+}
+// 手机模式整条徽章 display:none，干脆不建，免得白取图。
+const iconsOn=()=>!!nativeIcons&&settings.layout==='pad'&&settings.richDanmaku;
+// 图到位才让位：load 之前自绘徽章照常显示，取图失败就摘掉 <img>，不留空框。
+// 不加 loading=lazy：预备态是 1px 透明片，浏览器取不取图没有保证。
+function iconImage(source,owner){
+  const image=make('img','dy-art');image.alt='';image.decoding='async';
+  image.addEventListener('load',()=>{owner.dataset.art='';},{once:true});
+  image.addEventListener('error',()=>{delete owner.dataset.art;image.remove();},{once:true});
+  image.src=source;return image;
+}
+// 牌前缀是房间限时活动，多数房间没有，默认不显示、load 成功才露出，
+// 同时打上 data-prefix 让等级数字避开金章。
+// attr 是这个人自己的挂件 ID，服务端优先给个人那张、查不到退回房间前缀；
+// 两条路径分开缓存，attr 为 0 时不要凭空加一段。
+function prefixImage(room,attr,owner){
+  const image=make('img','dy-prefix');image.alt='';image.decoding='async';
+  image.addEventListener('load',()=>{image.dataset.on='';owner.dataset.prefix='';},{once:true});
+  image.addEventListener('error',()=>{delete owner.dataset.prefix;image.remove();},{once:true});
+  image.src='/assets/medal/room/'+room+(attr?'/'+attr:'');return image;
+}
+// 徽章条无条件建 DOM，露不露由 CSS 决定。
+function badges(e,node){
+  if(!node)node=make('span','dy-badges');
+  // 主题进 key：等级图分两套，换主题要换图。
+  const m=e.userMeta,art=iconsOn(),key=m?[art?'art':'flat',settings.theme,m.noble?.level,m.noble?.name,m.roomAdmin,m.platformAdmin,m.fanBadge?.level,m.fanBadge?.name,m.fanBadge?.roomId,m.fanBadge?.attr,m.level].join('|'):'';
+  if(node._key===key)return node;
+  node._key=key;node.replaceChildren();
+  if(!m)return node;
+  if(m.noble?.level){const b=make('span','dy-badge dy-noble');b.append(make('span','','♛'),make('span','',m.noble.name||('贵族 '+m.noble.level)));
+    if(art&&nativeIcons.noble.has(m.noble.level))b.append(iconImage('/assets/noble/'+m.noble.level,b));node.append(b);}
+  if(typeof m.level==='number'&&m.level>0){const b=make('span','dy-badge dy-level',m.level);b.dataset.tier=String(levelTier(m.level));
+    if(art&&m.level<=nativeIcons.levelMax)b.append(iconImage('/assets/level/'+(settings.theme==='light'?'light':'dark')+'/'+m.level,b));node.append(b);}
+  if(m.fanBadge?.name){const b=make('span','dy-badge dy-fans');b.dataset.tier=String(fansTier(m.fanBadge.level||0));b.append(make('i','',m.fanBadge.level||0),make('b','',m.fanBadge.name));
+    if(art){
+      // 底图每 5 级一档、顶格 60，直接当背景铺上；回源失败时下层渐变照常露出。
+      b.style.setProperty('--dy-plate','url("/assets/medal/'+Math.min(Math.max(m.fanBadge.level||0,0),nativeIcons.medalMax)+'")');
+      b.dataset.art='';
+      const room=normalizeUID(m.fanBadge.roomId);if(room)b.append(prefixImage(room,normalizeUID(m.fanBadge.attr),b));
+    }
+    node.append(b);}
+  if(m.roomAdmin)node.append(make('span','dy-badge dy-admin','管'));
+  if(m.platformAdmin)node.append(make('span','dy-badge dy-super','超'));
+  return node;
+}
+function identity(e,group){
+  if(!group){group=make('span','identity');const name=make('button','nickname');name.type='button';name.dir='auto';name.addEventListener('click',()=>openUser(group._event));group._badges=badges(e);group.append(group._badges,name);group._name=name;}
+  const important=e.kind==='gift'?settings.highlightGifts&&(followed(e)||isAdmin(e)):followed(e)&&settings.highlightFollows||isAdmin(e)&&settings.highlightAdmins,cls='identity'+(important?' important':'');
+  if(group.className!==cls)group.className=cls;
+  // 同一条消息重画时整段跳过，但图标就绪与主题切换不改消息对象，所以还要看代数。
+  if(group._event!==e||group._badgeAge!==badgeAge){const name=group._name;patchText(name,safeName(e));name.title=safeName(e);patchAttribute(name,'aria-label','查看用户 '+safeName(e));name.disabled=!uidOf(e);badges(e,group._badges);group._event=e;group._badgeAge=badgeAge;}
+  return group;
+}
+function identityClass(e){
+  const roles=(followed(e)?' is-followed':'')+(isAdmin(e)?' is-admin':'');
+  return roles+(e.kind==='gift'?(settings.highlightGifts?' emphasize-gift':''):(followed(e)&&settings.highlightFollows?' emphasize-follow':'')+(isAdmin(e)&&settings.highlightAdmins?' emphasize-admin':''));
+}
+function rememberScore(e,target){
+  const records=target?.scoreRecords||scoreRecords,key=eventKey(e);if(records.has(key)||!eventScoreCommand(e))return;
+  records.set(key,e);if(records.size>MAX_SCORES){const oldest=[...records.values()].sort(compareScores)[0];records.delete(eventKey(oldest));(target?.scoreChecks||scoreChecks).delete(eventKey(oldest));}if(!records.has(key))return;if(target?target===preview:!preview)scoreFeedDirty=true;
+  const state=(target?pageState:preview?.livePageState||pageState).scores;if(!state.live)state.newMessages=true;
+  if(target?view!=='scores':preview||view!=='scores')state.unread=true;
+}
+function consumeScoreReceipt(e,target){
+  if(safeName(e)!==SCORE_BOT)return false;
+  const receipt=scoreReceipt(e.text);if(!receipt)return false;
+  const records=target?.scoreRecords||scoreRecords,checks=target?.scoreChecks||scoreChecks,at=eventData(e).at;
+  let best=null,rank=-1;
+  for(const [key,item] of records){
+    const parts=eventScoreParts(item);
+    if(!parts||parts.action!==receipt.action||parts.amount!==receipt.amount||safeName(item)!==receipt.sender)continue;
+    const gap=at-eventData(item).at;if(gap<0||gap>SCORE_MATCH_MS)continue;
+    const check=checks.get(key);
+    // 单发只核销一次；群发可收多条回执，同一受赠者不重复计入。
+    if(check&&(!parts.bulk||check.receipts.some(r=>r.receiver===receipt.receiver)))continue;
+    const weight=(parts.bulk?1:scoreTargetHits(parts.target,receipt.receiver)?3:2)*1e13-eventData(item).at;
+    if(weight>rank){rank=weight;best=key;}
+  }
+  // 核销上了才吞掉回执，配不上的（如网页端多选赠送）照常留在聊天流里。
+  if(!best)return false;
+  const check=checks.get(best)||{receipts:[]};check.receipts.push({receiver:receipt.receiver,amount:receipt.amount,at:e.at});checks.set(best,check);
+  if(target?target===preview:!preview)scoreFeedDirty=true;
+  return true;
+}
+const ordinaryChatEntry=(entry,people)=>!entry.admin&&!people.has(entry.uid);
+// firstAt 是显示用的原串，排序比较一律走 firstMs：渲染热路径里反复 Date.parse 太贵。
+const emptyChatArchive=()=>({count:0,qualified:0,uid:'',multiple:false,firstAt:'',firstMs:Infinity,order:0});
+function mergeChatArchive(archive,part){
+  if(!part.count)return;
+  if(!archive.firstAt||part.firstMs<archive.firstMs||part.firstMs===archive.firstMs&&part.order<archive.order){archive.firstAt=part.firstAt;archive.firstMs=part.firstMs;archive.order=part.order;}
+  archive.count+=part.count;archive.qualified+=part.qualified;archive.multiple=archive.multiple||part.multiple||!!(archive.uid&&part.uid&&archive.uid!==part.uid);archive.uid=archive.uid||part.uid;
+}
+function archiveChatEntry(group,entry){mergeChatArchive(group.archive,{count:entry.count,qualified:entry.uid?entry.count:0,uid:entry.uid,multiple:false,firstAt:entry.firstAt,firstMs:entry.firstMs,order:entry.order});}
+function trimChatEntries(group,people,recount=false){
+  if(recount){for(const entry of group.entries.values())entry.retained=0;for(const item of group.originals){const entry=group.entries.get(item.userKey);if(entry&&entry.id===item.entryID)entry.retained++;}}
+  for(const [key,entry] of group.entries)if(!entry.retained&&ordinaryChatEntry(entry,people)){archiveChatEntry(group,entry);group.entries.delete(key);}
+  if(group.entries.size>MAX_ORIGINALS+MAX_ROWS)for(const [key,entry] of group.entries){if(!entry.retained)group.entries.delete(key);if(group.entries.size<=MAX_ORIGINALS+MAX_ROWS)break;}
+}
+function chatGroupInfo(group,people){
+  const ordinary=[],archive=group.archive;let count=archive.count,qualified=archive.qualified,uid=archive.uid,multiple=archive.multiple,firstAt=archive.firstAt,firstMs=archive.firstMs,order=archive.order;
+  for(const entry of group.entries.values())if(ordinaryChatEntry(entry,people)){
+    ordinary.push(entry);count+=entry.count;
+    if(entry.uid){qualified+=entry.count;multiple=multiple||!!(uid&&uid!==entry.uid);uid=uid||entry.uid;}
+    if(!firstAt||entry.firstMs<firstMs||entry.firstMs===firstMs&&entry.order<order){firstAt=entry.firstAt;firstMs=entry.firstMs;order=entry.order;}
+  }
+  return {ordinary,count,qualifies:qualified>=5&&multiple,firstAt,firstMs,order};
+}
+function absorbChatOrdinary(target,source,people){
+  const moved=new Map();
+  for(const [key,entry] of source.entries)if(ordinaryChatEntry(entry,people)){
+    let targetKey=key,previous=target.entries.get(key);if(previous&&!ordinaryChatEntry(previous,people)){targetKey=entry.id;previous=target.entries.get(targetKey);}
+    if(previous){previous.count+=entry.count;if(compareNewest(entry.event,previous.event)<=0)previous.event=entry.event;if(entry.firstMs<previous.firstMs){previous.firstAt=entry.firstAt;previous.firstMs=entry.firstMs;previous.order=entry.order;}}
+    else{previous=entry;target.entries.set(targetKey,entry);}
+    moved.set(entry.id,{entryID:previous.id,userKey:targetKey});source.entries.delete(key);
+  }
+  if(!moved.size&&!source.archive.count)return;
+  mergeChatArchive(target.archive,source.archive);source.archive=emptyChatArchive();
+  const originals=[];source.originals=source.originals.filter(item=>{const member=moved.get(item.entryID);if(member)originals.push({...item,...member});return !member;});
+  target.originals=target.originals.concat(originals).sort((a,b)=>compareNewest(b.event,a.event)).slice(-MAX_ORIGINALS);trimChatEntries(target,people,true);
+  target.startMs=Math.min(target.startMs,source.startMs);if(compareNewest(source.lastEvent,target.lastEvent)<=0){target.lastMs=source.lastMs;target.lastEvent=source.lastEvent;}
+  target.crowded=true;source.crowded=true;
+}
+const chatGroupIndexes=new WeakMap();
+function sameTextGroups(groups,text){
+  let index=chatGroupIndexes.get(groups);
+  if(!index){index=new Map();for(const group of groups.values()){let bucket=index.get(group.text);if(!bucket)index.set(group.text,bucket=[]);bucket.push(group);}chatGroupIndexes.set(groups,index);}
+  let bucket=index.get(text);if(!bucket)index.set(text,bucket=[]);return bucket;
+}
+function deleteChatGroup(groups,group){
+  groups.delete(group.key);const index=chatGroupIndexes.get(groups),bucket=index?.get(group.text);
+  if(bucket){const position=bucket.indexOf(group);if(position>=0)bucket.splice(position,1);if(!bucket.length)index.delete(group.text);}
+}
+function clearChatGroups(groups){groups.clear();chatGroupIndexes.delete(groups);}
+function rememberChat(e,target){
+  rememberScore(e,target);
+  if(consumeScoreReceipt(e,target))return;
+  const groups=target?.chatGroups||chatGroups,records=target?.history||history,cards=target?.followCards||followCards,people=target?.follows||follows;
+  const displayed=target?target===preview:!preview;if(displayed)chatFeedDirty=true;
+  const text=eventData(e).text,at=eventData(e).at,bucket=sameTextGroups(groups,text),windowMs=crowdWindowMs();
+  // 倒序遍历与回放时的查找顺序一致，且不碰无关文本。
+  let group;for(let i=bucket.length-1;i>=0;i--){const candidate=bucket[i];if(at>candidate.startMs-windowMs&&at<candidate.lastMs+windowMs){group=candidate;break;}}
+  if(!group){const key=eventKey(e);group={id:'group:'+key,key,startMs:at,lastMs:at,lastEvent:e,text,entries:new Map(),originals:[],archive:emptyChatArchive(),crowded:false};groups.set(key,group);bucket.push(group);}
+  group.startMs=Math.min(group.startMs,at);if(compareNewest(e,group.lastEvent)<=0){group.lastMs=at;group.lastEvent=e;}
+  const uid=uidOf(e),userKey=uid||eventKey(e);let entry=group.entries.get(userKey);
+  if(!entry){entry={id:'chat:'+eventKey(e),uid,event:e,firstAt:e.at,firstMs:at,order:target?target.sequence++:sequence++,count:0,retained:0,admin:isAdmin(e)};group.entries.set(userKey,entry);}
+  entry.count++;entry.retained++;entry.admin=entry.admin||isAdmin(e);if(compareNewest(e,entry.event)<=0)entry.event=e;if(at<entry.firstMs){entry.firstAt=e.at;entry.firstMs=at;}
+  group.originals.push({entryID:entry.id,userKey,event:e});
+  if(group.originals.length>MAX_ORIGINALS){const old=group.originals.shift(),previous=group.entries.get(old.userKey);if(previous&&previous.id===old.entryID&&--previous.retained===0&&ordinaryChatEntry(previous,people)){archiveChatEntry(group,previous);group.entries.delete(old.userKey);}}
+  if(group.entries.size>MAX_ORIGINALS+MAX_ROWS)trimChatEntries(group,people);
+  records.push(e);if(records.length>300)records.shift();
+  if(people.has(uid)){
+    if(displayed)priorityDirty=true;const previous=cards.get(uid);
+    if(!previous||eventKey(e)!==eventKey(previous.event)&&compareNewest(e,previous.event)<=0)cards.set(uid,{event:e,text,count:previous?.text===text&&at<followExpiry(previous)?previous.count+1:1});
+  }
+}
+// 中间那截称号要单独上色，所以拆成三段。
+function noticeParts(e){
+  const meta=e.userMeta||{};
+  if(meta.noble?.level)return ['',meta.noble.name||('贵族 '+meta.noble.level),' 来了'];
+  // 房管进场已在服务端丢弃，这里只剩贵族与超管。
+  return ['','',meta.platformAdmin?'超管来了':'来了'];
+}
+// 档位划分与 Barrage-userEnter--* 一致。整张表不随放行门槛裁剪——
+// 门槛只在 noticeNoble 一处，改回来就直接能用。
+const NOBLE_TONE={1:'knight',2:'viscount',3:'earl',4:'earl',5:'earl',6:'earl',7:'paladin',8:'earl',9:'earl'};
+const noticeTone=e=>NOBLE_TONE[e.userMeta?.noble?.level]||'plain';
+// 只播报伯爵及以上：骑士、子爵是最便宜的两档，游侠是体验档，刷得跟钻粉一样勤。
+// 与服务端 guestEnter 同一条规则，两边都挡。
+const noticeNoble=e=>{const level=e.userMeta?.noble?.level;return typeof level==='number'&&level>=3&&level!==7;};
+function rememberNotice(e,target){
+  const list=target?target.notices:notices;
+  list.push({id:'notice:'+eventKey(e),type:'notice',event:e,firstAt:e.at,firstMs:eventData(e).at,order:target?target.sequence++:sequence++,count:1,tokens:[eventKey(e)]});
+  if(list.length>MAX_NOTICES)list.shift();
+  if(target?target===preview:!preview)chatFeedDirty=true;
+}
+function projectChat(groups=chatGroups,people=follows,announcements=notices){
+  const rows=[],active=[],now=Date.now(),windowMs=crowdWindowMs(),byText=new Map(),infos=new Map();
+  for(const group of groups.values()){const info=chatGroupInfo(group,people),expired=group.lastMs+windowMs<=now;infos.set(group,info);let bucket=byText.get(group.text);if(!bucket){bucket={groups:[],target:null};byText.set(group.text,bucket);}bucket.groups.push({group,info,expired});if(!expired&&info.count&&(group.crowded||info.qualifies)&&(!bucket.target||compareNewest(group.lastEvent,bucket.target.lastEvent)<=0))bucket.target=group;}
+  // 吸并改动两边的 entries，这两组下面重算，其余沿用上一遍的统计。
+  for(const bucket of byText.values())if(bucket.target)for(const {group,info,expired} of bucket.groups)if(group!==bucket.target&&!(expired&&(group.crowded||info.qualifies))){absorbChatOrdinary(bucket.target,group,people);infos.delete(group);infos.delete(bucket.target);}
+  for(const group of groups.values()){
+    const info=infos.get(group)||chatGroupInfo(group,people),crowd=info.count>0&&(group.crowded||info.qualifies),expired=group.lastMs+windowMs<=now;
+    if(crowd)group.crowded=true;
+    // 只盯实时数据，测试预览不该把人震一跳。
+    if(crowd&&!expired&&groups===chatGroups)coachWatch(group,info);
+    if(crowd&&!expired)active.push({id:'crowd:'+group.id,type:'crowd',group,entries:info.ordinary,tokens:info.ordinary.map(x=>x.id),count:info.count,firstAt:info.firstAt,firstMs:info.firstMs,order:info.order});
+    for(const entry of group.entries.values()){if((crowd||group.crowded&&expired)&&ordinaryChatEntry(entry,people))continue;rows.push({id:entry.id,type:'chat',group,entries:[entry],tokens:[entry.id],count:entry.count,event:entry.event,firstAt:entry.firstAt,firstMs:entry.firstMs,order:entry.order});}
+  }
+  // 提示行没有分组，按同一套时间序混排即可；关掉开关就整批不进 rows。
+  if(settings.showNotices)for(const row of announcements)rows.push(row);
+  rows.sort((a,b)=>a.firstMs-b.firstMs||a.order-b.order);
+  active.sort((a,b)=>compareNewest(b.group.lastEvent,a.group.lastEvent));
+  const visible=rows.concat(active).slice(-MAX_ROWS),retained=new Set(visible.map(x=>x.group?.key));
+  for(const [key,group] of groups)if(!retained.has(key)&&group.lastMs+windowMs<=now)deleteChatGroup(groups,group);
+  // 按时间过期而非跟着分组：分组会被拆被删，提醒记录不该跟着没。
+  if(groups===chatGroups)for(const [text,mark] of coachSeen)if(now-Math.abs(mark)>=settings.coachGap*1000)coachSeen.delete(text);
+  return visible;
+}
+function arrivalAccent(node,e,base=node.className.replace(/\s*\brow-arrival\b/g,'')){
+  const age=e?Date.now()-eventData(e).at:Infinity,active=e&&settings.softEffects&&(e.kind==='gift'?settings.highlightGifts:followed(e)&&settings.highlightFollows||isAdmin(e)&&settings.highlightAdmins)&&age>=0&&age<700,cls=base+(active?' row-arrival':'');
+  if(node.className!==cls)node.className=cls;
+  if(active&&node._arrivalEvent!==e){node.style.animationDelay=-age+'ms';if(node._arrivalEvent)for(const animation of node.getAnimations?.()||[])if(animation.animationName==='row-arrival')animation.currentTime=0;node._arrivalEvent=e;}
+  return node;
+}
+function moreButton(label,action){const button=make('button','message-more','⋯');button.type='button';button.setAttribute('aria-label',label);button.addEventListener('click',action);return button;}
+function colonNode(){const el=make('span','colon',':');el.setAttribute('aria-hidden','true');return el;}
+function chatNode(row,card){
+  if(!card){
+    card=make('article');
+    if(row.type==='crowd'){card._speech=make('button','crowd-text');card._speech.dir='auto';card._speech.addEventListener('click',()=>openAggregate(card._row));card._meta=make('div','crowd-meta');card.append(card._speech,card._meta);}
+    else if(row.type==='notice'){card._line=make('div','message-line');card._identity=identity(row.event);card._speech=make('span','speech');card._mark=make('b','notice-mark');card._tail=make('span','speech');card._line.append(card._identity,make('span','notice-gap',' '),card._speech,card._mark,card._tail);card.append(card._line);}
+    else{card._line=make('div','message-line');card._identity=identity(row.event);card._speech=make('span','speech');card._speech.dir='auto';card._line.append(card._identity,colonNode(),card._speech);card.append(card._line);}
+    // 没有原文可展开，不给「⋯」按钮。
+    if(row.type!=='notice'){card._more=moreButton('',()=>openAggregate(card._row));card.append(card._more);}
+  }
+  card._row=row;card._tokens=row.tokens;patchData(card,'key',row.id);patchData(card,'type',row.type);patchData(card,'count',row.count);
+  const base='message-item '+(row.type==='crowd'?'crowd-row'+(settings.highlightCrowds?' emphasize-crowd':''):row.type==='notice'?'notice-row':identityClass(row.event).trim());
+  if(row.type==='crowd'){
+    patchData(card,'participants',row.entries.length);patchData(card,'expires',row.group.lastMs+crowdWindowMs());patchText(card._speech,(row.group.text||'（空白消息）')+' ×'+row.count);patchText(card._meta,'多人 · '+row.count+' 条消息 · 查看原文');
+  }else if(row.type==='notice'){
+    const [prefix,mark,tail]=noticeParts(row.event);
+    patchData(card,'uid',uidOf(row.event));patchData(card,'notice',noticeTone(row.event));identity(row.event,card._identity);patchText(card._speech,prefix);patchText(card._mark,mark);patchText(card._tail,tail);
+  }else{
+    patchData(card,'uid',uidOf(row.event));patchData(card,'noble',nobleOf(row.event));patchData(card._speech,'col',colOf(row.event));identity(row.event,card._identity);patchText(card._speech,row.group.text||'（空白消息）');patchRepeat(card._line,row.count,'x ');
+  }
+  if(card._more&&card._firstAt!==row.firstAt){patchAttribute(card._more,'aria-label','查看消息详情 '+timeLabel(row.firstAt));card._firstAt=row.firstAt;}
+  return arrivalAccent(card,row.type==='chat'&&followed(row.event)?row.event:null,base);
+}
+function scoreMark(e,checks,node){
+  if(!eventScoreParts(e))return null;
+  if(!node)node=make('span','score-mark');
+  const check=checks.get(eventKey(e)),count=check?.receipts.length||0,state=count?'ok':Date.now()-eventData(e).at>SCORE_PENDING_MS?'miss':'wait';
+  if(node._state!==state||node._check!==check||node._receipts!==count){
+    node.className='score-mark '+state;patchText(node,state==='ok'?'✓':state==='miss'?'×':'○');
+    node.title=state==='ok'?'已核销 · '+check.receipts.map(r=>r.receiver+' '+r.amount).join('、'):state==='miss'?'超时未收到 '+SCORE_BOT+' 的回执':'等待 '+SCORE_BOT+' 回执';
+    patchAttribute(node,'aria-label',state==='ok'?'已核销':state==='miss'?'未核销':'等待回执');node._state=state;node._check=check;node._receipts=count;
+  }
+  return node;
+}
+function scheduleScoreExpiry(){
+  clearTimeout(scoreExpiryTimer);scoreExpiryTimer=0;
+  if(view!=='scores')return;
+  const checks=preview?.scoreChecks||scoreChecks,now=Date.now();let next=Infinity;
+  for(const e of scoreRows){
+    if(checks.get(eventKey(e))?.receipts.length||!eventScoreParts(e))continue;
+    const deadline=eventData(e).at+SCORE_PENDING_MS;if(deadline>=now)next=Math.min(next,deadline);
+  }
+  if(Number.isFinite(next))scoreExpiryTimer=setTimeout(()=>{scoreExpiryTimer=0;scoreFeedDirty=true;render();},next-now+50);
+}
+function scoreNode(e,checks,row){
+  if(!row){
+    row=make('article');row._line=make('div','message-line');row._speech=make('span','speech');row._speech.dir='auto';row._identity=identity(e);row._mark=scoreMark(e,checks);
+    row._line.append(...(row._mark?[row._mark]:[]),row._identity,colonNode(),row._speech);row._time=make('div','score-time');row._more=moreButton('',()=>openDetail(row._event));row.append(row._line,row._time,row._more);
+  }
+  patchData(row,'key',eventKey(e));patchData(row,'uid',uidOf(e));patchData(row,'noble',nobleOf(e));patchData(row._speech,'col',colOf(e));row._tokens=[eventKey(e)];identity(e,row._identity);scoreMark(e,checks,row._mark);
+  if(row._event!==e){patchText(row._speech,eventData(e).text);patchText(row._time,timeLabel(e.at));patchAttribute(row._more,'aria-label','查看给分相关聊天详情 '+timeLabel(e.at));row._event=e;}
+  return arrivalAccent(row,followed(e)?e:null,'message-item score-row'+identityClass(e));
+}
+function inlineAction(text,action){
+  const node=make('span','speech row-action',text);node.dir='auto';node.tabIndex=0;node.setAttribute('role','button');node.addEventListener('click',action);node.addEventListener('keydown',event=>{if(event.key==='Enter'||event.key===' '){event.preventDefault();action();}});return node;
+}
+function giftNode(e,pinned=false,row){
+  if(!row){
+    row=make('article');row._identity=identity(e);row._speech=inlineAction('',()=>openDetail(row._event));const line=make('div','message-line');line.append(row._identity,colonNode(),row._speech);
+    if(!pinned){row._amount=make('span','gift-value-inline');line.append(row._amount);}row.append(line);
+    if(!pinned){row._more=moreButton('',()=>openDetail(row._event));row.append(row._more);}
+  }
+  patchData(row,'key',eventKey(e));patchData(row,'uid',uidOf(e));patchData(row,'amount',amountOf(e)??'unknown');row._tokens=[eventKey(e)];identity(e,row._identity);
+  if(row._event!==e){patchText(row._speech,giftText(e));if(!pinned){patchText(row._amount,amountLabel(e));patchAttribute(row._more,'aria-label','查看礼物详情 '+timeLabel(e.at));}row._event=e;}
+  return arrivalAccent(row,e,'compact-row gift-row '+(pinned?'priority-row':'message-item')+identityClass(e));
+}
+// 以屏幕中部可见行的绝对 Y 作锚，置顶行高度变化也跟得上。
+function captureScroll(page){
+  const feed=feedOf(page),state=pageState[page];if(!feed.clientHeight)return state.snapshot;
+  // 教练页是固定表单，没有 [data-key] 行可锚，直接记像素位置且永不「跟随最新」。
+  if(page==='coach')return {live:false,candidates:[],top:feed.scrollTop};
+  if(state.live)return {live:true};
+  const top=feed.getBoundingClientRect().top,target=top+feed.clientHeight*.48;
+  const nodes=[...feed.querySelectorAll('[data-key]')].filter(node=>page!=='all'||node.dataset.type!=='crowd');
+  let index=nodes.findIndex(node=>node.getBoundingClientRect().bottom>target);if(index<0)index=nodes.length-1;
+  const candidates=[nodes[index],nodes[index+1],nodes[index-1]].filter(Boolean).map(node=>({key:node.dataset.key,tokens:node._tokens||[],y:node.getBoundingClientRect().top}));
+  return {live:false,candidates,top:feed.scrollTop};
+}
+function restoreScroll(page,snapshot){
+  const feed=feedOf(page),state=pageState[page];if(!feed.clientHeight){state.snapshot=snapshot;return;}
+  if(page==='coach'){state.live=false;feed.scrollTop=snapshot&&!snapshot.live?snapshot.top:0;state.snapshot=captureScroll(page);return;}
+  if(!snapshot||snapshot.live){state.live=true;feed.scrollTop=page==='gifts'||page==='track'?0:feed.scrollHeight;return;}
+  state.live=false;const nodes=[...feed.querySelectorAll('[data-key]')];
+  // 优先锚在仍存活的历史行上，而不是消息已并入底部聚合的那行。
+  for(const byToken of [false,true])for(const anchor of snapshot.candidates||[]){
+    const node=nodes.find(n=>n.dataset.type!=='crowd'&&(byToken?(n._tokens||[]).some(key=>anchor.tokens.includes(key)):n.dataset.key===anchor.key));
+    if(node){feed.scrollTop+=node.getBoundingClientRect().top-anchor.y;state.snapshot=captureScroll(page);return;}
+  }
+  feed.scrollTop=Math.min(snapshot.top,feed.scrollHeight-feed.clientHeight);state.snapshot=captureScroll(page);
+}
+function prioritySnapshot(id='priority'){const list=$(id);if(!list||list.scrollTop<8)return null;const top=list.getBoundingClientRect().top,row=[...list.querySelectorAll('[data-key]')].find(n=>n.getBoundingClientRect().bottom>top+20);return row?{key:row.dataset.key,y:row.getBoundingClientRect().top}:null;}
+function restorePriority(snapshot,id='priority'){const list=$(id);if(!list)return;if(!snapshot){list.scrollTop=0;return;}const row=[...list.querySelectorAll('[data-key]')].find(n=>n.dataset.key===snapshot.key);if(row)list.scrollTop+=row.getBoundingClientRect().top-snapshot.y;}
+function makePrioritySection(id,title){const section=make('section','priority-section');section.id=id+'-section';section.setAttribute('aria-label',title);const list=make('div','priority-list'+(id==='gift-rows'?' gift-list':''));list.id=id;section.append(list);return {section,list};}
+const giftIdentity=e=>e.giftId?'id:'+String(e.giftId):eventData(e).gift?'name:'+eventData(e).gift:'event:'+eventKey(e);
+const giftDonor=e=>uidOf(e)?'uid:'+uidOf(e):'event:'+eventKey(e);
+const giftCapsuleKey=e=>JSON.stringify([giftDonor(e),giftIdentity(e)]);
+function addGiftCapsule(e,capsules=giftCapsules){
+  const expires=giftExpiry(e,settings),raw=String(e.count||'1');if(expires===null||!/^\d+$/.test(raw))return;
+  const quantity=BigInt(raw);if(quantity<=0n)return;const key=giftCapsuleKey(e),at=eventData(e).at;let capsule=capsules.get(key);
+  if(capsule&&at<capsule.startMs)return;
+  if(!capsule||at>=capsule.expires){capsules.delete(key);capsule={key,id:'capsule:'+eventKey(e),donor:giftDonor(e),gift:giftIdentity(e),startMs:at,lastMs:at,event:e,expires,quantity:0n,events:0};capsules.set(key,capsule);}
+  capsule.quantity+=quantity;capsule.events++;
+  if(compareNewest(e,capsule.event)<=0){capsule.event=e;capsule.lastMs=at;capsule.expires=expires;}
+}
+function rememberGift(e,target){
+  const records=target?.giftRecords||giftRecords,capsules=target?.giftCapsules||giftCapsules,key=eventKey(e);if(records.has(key))return;
+  records.set(key,e);addGiftCapsule(e,capsules);if(target?target===preview:!preview){giftFeedDirty=true;priorityDirty=true;}
+  if(records.size>MAX_GIFTS){const oldest=[...records.values()].sort(compareNewest).pop();records.delete(eventKey(oldest));}
+}
+function pruneGiftCapsules(capsules=giftCapsules,now=Date.now()){let changed=false;for(const [key,capsule] of capsules)if(capsule.expires<=now){capsules.delete(key);changed=true;}return changed;}
+function updateGiftRules(previous){
+  priorityDirty=true;const refilter=previous.giftThreshold!==settings.giftThreshold||previous.giftMaximum!==settings.giftMaximum||JSON.stringify(previous.customGifts)!==JSON.stringify(settings.customGifts);
+  for(const target of [{giftRecords,giftCapsules},...(preview?[preview]:[])]){
+    if(refilter){target.giftCapsules.clear();for(const event of [...target.giftRecords.values()].sort((a,b)=>compareNewest(b,a)))addGiftCapsule(event,target.giftCapsules);}
+    else if(previous.giftDuration!==settings.giftDuration)for(const capsule of target.giftCapsules.values())capsule.expires=capsule.lastMs+settings.giftDuration*1000;
+    pruneGiftCapsules(target.giftCapsules);
+  }
+  return refilter;
+}
+function updateGiftCountdowns(){
+  clearTimeout(giftCountdownTimer);giftCountdownTimer=0;
+  if(view!=='all'||currentScreen!=='monitor'||document.visibilityState!=='visible')return;
+  const now=Date.now();let active=false;
+  for(const node of document.querySelectorAll('.gift-capsule')){
+    const remaining=Math.max(0,Number(node.dataset.expires)-now),seconds=Math.ceil(remaining/1000),progress=String(Math.min(1,remaining/Number(node.dataset.duration))),counter=node.querySelector('.capsule-seconds');
+    if(node.style.getPropertyValue('--remaining')!==progress)node.style.setProperty('--remaining',progress);
+    if(counter.textContent!==seconds+'s')counter.textContent=seconds+'s';
+    patchAttribute(node,'aria-label',node.dataset.label+'，还剩 '+seconds+' 秒，查看礼物记录');
+    if(remaining>0)active=true;
+  }
+  // 共用 100ms 显示节拍；胶囊仍由 render() 按各自到期时刻移除。
+  if(active)giftCountdownTimer=setTimeout(updateGiftCountdowns,100);
+}
+function giftCapsuleNode(capsule,button){
+  if(!button){button=make('button','gift-capsule');button.type='button';button._label=make('span','capsule-label');button.append(button._label,make('span','capsule-seconds'));button.addEventListener('click',()=>openGiftCapsule(button._capsule));}
+  const label=(eventData(capsule.event).gift||('礼物 '+(capsule.event.giftId||'')))+' ×'+capsule.quantity;
+  button._capsule=capsule;patchData(button,'key',capsule.id);patchData(button,'expires',capsule.expires);patchData(button,'duration',settings.giftDuration*1000);patchData(button,'label',label);patchData(button,'quantity',capsule.quantity);patchText(button._label,label);
+  return arrivalAccent(button,capsule.event,'gift-capsule');
+}
+function pinNode(donor,row){
+  if(!row){row=make('article');row._identity=identity(donor.event);row._capsules=make('div','gift-capsules');row._capsules.tabIndex=0;row._capsules.setAttribute('aria-label','礼物胶囊，可左右滑动');row.append(row._identity,row._capsules);}
+  patchData(row,'key',donor.key);patchData(row,'uid',uidOf(donor.event));row._tokens=[donor.key];identity(donor.event,row._identity);
+  const cls='compact-row gift-row priority-row donor-row'+identityClass(donor.event);if(row.className!==cls)row.className=cls;
+  renderKeyed(row._capsules,donor.capsules,capsule=>capsule.id,giftCapsuleNode);return row;
+}
+function followNode(info,row){
+  const e=info.event,uid=uidOf(e);
+  if(!row){row=make('article');row._line=make('div','message-line');row._identity=identity(e);row._speech=inlineAction('',()=>openUser(row._event));row._line.append(row._identity,colonNode(),row._speech);row.append(row._line);}
+  row._event=e;patchData(row,'key',uid);patchData(row,'uid',uid);patchData(row,'count',info.count);patchData(row,'expires',followExpiry(info));identity(e,row._identity);patchText(row._speech,info.text||'（空白消息）');patchRepeat(row._line,info.count,'×');
+  return arrivalAccent(row,e,'compact-row priority-row follow-row'+identityClass(e));
+}
+function renderPriority(){
+  const liveExpired=pruneGiftCapsules(),previewExpired=preview?pruneGiftCapsules(preview.giftCapsules):false,now=Date.now();
+  if(liveExpired||previewExpired||activePins.some(x=>x.expires<=now)||activeFollowPins.some(x=>followExpiry(x)<=now))priorityDirty=true;
+  activePins=[...(preview?.giftCapsules||giftCapsules).values()];const cards=[...(preview?.followCards||followCards).values()].filter(x=>followed(x.event)&&followExpiry(x)>now).sort((a,b)=>compareNewest(a.event,b.event)).slice(0,5);activeFollowPins=cards;
+  if(view!=='all'||!priorityDirty)return;
+  const position=prioritySnapshot(),giftPosition=prioritySnapshot('gift-rows'),donors=new Map(),sections=[];
+  for(const capsule of activePins){let donor=donors.get(capsule.donor);if(!donor){donor={key:capsule.donor,event:capsule.event,capsules:[]};donors.set(capsule.donor,donor);}donor.capsules.push(capsule);if(compareNewest(capsule.event,donor.event)<=0)donor.event=capsule.event;}
+  if(settings.showGiftPins&&donors.size)sections.push({id:'gift-rows',title:'礼物',items:[...donors.values()].sort((a,b)=>compareNewest(a.event,b.event)).slice(0,MAX_PINS)});
+  if(settings.showFollowPins&&cards.length)sections.push({id:'follow-rows',title:'特别关注',items:cards});
+  renderKeyed($('priority'),sections,section=>section.id,(data,section)=>{
+    if(!section){const created=makePrioritySection(data.id,data.title);section=created.section;section._list=created.list;}
+    if(data.id==='gift-rows')renderKeyed(section._list,data.items,donor=>donor.key,pinNode);else renderKeyed(section._list,data.items,info=>uidOf(info.event),followNode);
+    return section;
+  });
+  updateGiftCountdowns();restorePriority(giftPosition,'gift-rows');restorePriority(position);priorityDirty=false;
+}
+function dirtyHistoryFeeds(){chatFeedDirty=true;priorityDirty=true;giftFeedDirty=true;scoreFeedDirty=true;}
+function renderChatFeed(){
+  if(view!=='all'||!chatFeedDirty)return;
+  renderKeyed($('chat-feed'),chatRows.length?chatRows:[null],row=>row?row.id:'empty',(row,node)=>row?chatNode(row,node):node||make('div','feed-empty','等待下一句弹幕'));chatFeedDirty=false;
+}
+function renderHistoryFeed(){
+  if(view==='gifts'&&giftFeedDirty){
+    giftRows=[...(preview?.giftRecords||giftRecords).values()].sort(compareGifts);const items=[];let lower=false;
+    for(const e of giftRows){if(amountOf(e)===null&&!lower){items.push('unknown');lower=true;}items.push(e);}
+    if(!giftRows.length)items.push('empty');
+    renderKeyed($('gift-feed'),items,item=>typeof item==='string'?item:eventKey(item),(item,node)=>typeof item==='string'?node||make(item==='empty'?'div':'h2',item==='empty'?'feed-empty':'gift-divider',item==='empty'?'收到的礼物会显示在这里':'免费道具、孵化产物、鱼丸与未知参考价'):giftNode(item,false,node));
+    patchText($('gift-caption'),'本条参考金额从高到低 · '+giftRows.length+' 条');giftFeedDirty=false;
+  }
+  if(view==='scores'&&scoreFeedDirty){
+    const checks=preview?.scoreChecks||scoreChecks;scoreRows=[...(preview?.scoreRecords||scoreRecords).values()].sort(compareScores);
+    renderKeyed($('score-feed'),scoreRows.length?scoreRows:[null],e=>e?eventKey(e):'empty',(e,node)=>e?scoreNode(e,checks,node):node||make('div','feed-empty','以 #给目标 数量 或 #炸目标 数量 开头的聊天会显示在这里'));
+    const settled=scoreRows.filter(e=>checks.get(eventKey(e))?.receipts.length).length;patchText($('score-caption'),'按接收时间从早到晚 · '+scoreRows.length+' 条'+(settled?' · 已核销 '+settled:''));scoreFeedDirty=false;scheduleScoreExpiry();
+  }else if(view!=='scores'&&scoreExpiryTimer)scheduleScoreExpiry();
+}
+function cancelScheduledRender(){clearTimeout(renderTimer);cancelAnimationFrame(renderFrame);renderTimer=0;renderFrame=0;renderDue=0;renderScheduleVersion++;}
+function render(){
+  const started=performance.now();cancelScheduledRender();const snapshot=pendingScrollRestore||captureScroll(view);pendingScrollRestore=null;
+  if(chatRows.some(row=>row.type==='crowd'&&row.group.lastMs+crowdWindowMs()<=Date.now()))chatFeedDirty=true;
+  if(preview)projectChat();
+  chatRows=preview?projectChat(preview.chatGroups,preview.follows,preview.notices):projectChat();renderChatFeed();renderHistoryFeed();
+  renderPriority();restoreScroll(view,snapshot);updateNewButtons();
+  clearTimeout(chatExpiryTimer);chatExpiryTimer=0;
+  const deadlines=chatRows.filter(row=>row.type==='crowd').map(row=>row.group.lastMs+crowdWindowMs()).concat([...giftCapsules.values(),...(preview?[...preview.giftCapsules.values()]:[])].map(capsule=>capsule.expires),[...followCards.values(),...(preview?[...preview.followCards.values()]:[])].filter(info=>followed(info.event)).map(followExpiry).filter(deadline=>deadline>Date.now()));
+  if(deadlines.length)chatExpiryTimer=setTimeout(()=>{chatExpiryTimer=0;render();},Math.max(0,deadlines.reduce((a,b)=>Math.min(a,b))-Date.now()));
+  const cost=performance.now()-started;renderGap=Math.max(RENDER_GAP_MS,cost*2);
+  nextRenderAt=Math.max(started,Math.min(nextRenderAt,started+renderGap))+cost+renderGap;
+}
+function scheduleRender(important=false){
+  const now=performance.now(),due=Math.max(now,nextRenderAt-(important?renderGap:0));
+  if(renderFrame||renderTimer&&renderDue<=due)return;
+  cancelScheduledRender();renderDue=due;const version=renderScheduleVersion;
+  const queueFrame=()=>{if(version!==renderScheduleVersion)return;renderTimer=0;renderFrame=requestAnimationFrame(()=>{if(version===renderScheduleVersion)render();});};
+  // 重要消息可借用一个批次间隔，render 把它带进下一拍。
+  const delay=due-performance.now();if(delay>0)renderTimer=setTimeout(queueFrame,delay);else queueFrame();
+}
+function updateNewButtons(){
+  $('new-chat').hidden=pageState.all.live||!pageState.all.newMessages;$('new-gift').hidden=pageState.gifts.live||!pageState.gifts.newMessages;$('new-score').hidden=pageState.scores.live||!pageState.scores.newMessages;
+  const unread=settings.scoreNotifications&&pageState.scores.unread;$('score-dot').hidden=!unread;$('nav-scores').setAttribute('aria-label',unread?'给分，有新消息':'给分');
+  const notice=unread?'给分页有新消息':'';if($('score-status').textContent!==notice)$('score-status').textContent=notice;
+}
+function jumpLive(page){const state=pageState[page];state.live=true;state.newMessages=false;state.snapshot={live:true};restoreScroll(page,state.snapshot);updateNewButtons();}
+function setView(next){tickExpiries();if(next==='scores')pageState.scores.unread=false;if(next===view){updateNewButtons();syncTrackPolling();return;}pageState[view].snapshot=captureScroll(view);view=next;if(view==='scores')scoreFeedDirty=true;for(const page of PAGES){$('page-'+page).hidden=page!==view;const tab=$('nav-'+page);tab.setAttribute('aria-selected',String(page===view));tab.tabIndex=page===view?0:-1;}pendingScrollRestore=pageState[view].snapshot;render();updateGiftCountdowns();syncTrackPolling();syncCoach();}
+function receiveMessage(e){
+  if(e.kind!=='chat'&&e.kind!=='gift'&&e.kind!=='enter')return;if(roomID&&e.roomId&&e.roomId!==roomID)return;
+  const key=eventKey(e);if(seen.has(key))return;seen.add(key);seenOrder.push(key);if(seenOrder.length>1500)seen.delete(seenOrder.shift());
+  const states=preview?.livePageState||pageState;
+  if(e.kind==='chat'){rememberChat(e);if(!states.all.live)states.all.newMessages=true;}
+  // 服务端已按同一门槛筛过，这里再挡一道，免得旧服务端配新页面时漏出来。
+  else if(e.kind==='enter'){if(!noticeNoble(e))return;rememberNotice(e);if(!states.all.live)states.all.newMessages=true;}
+  else{rememberGift(e);if(!states.gifts.live)states.gifts.newMessages=true;}
+  scheduleRender(e.kind==='gift'||followed(e)||isAdmin(e));
+}
+function clearRoom(){cancelScheduledRender();nextRenderAt=0;renderGap=RENDER_GAP_MS;clearTimeout(chatExpiryTimer);chatExpiryTimer=0;clearTimeout(giftCountdownTimer);giftCountdownTimer=0;clearTimeout(scoreExpiryTimer);scoreExpiryTimer=0;dirtyHistoryFeeds();sequence=0;history=[];notices=[];seen.clear();seenOrder=[];clearChatGroups(chatGroups);giftRecords.clear();scoreRecords.clear();scoreChecks.clear();giftCapsules.clear();followCards.clear();chatRows=[];giftRows=[];scoreRows=[];activePins=[];activeFollowPins=[];for(const state of Object.values(preview?.livePageState||pageState)){state.live=true;state.snapshot={live:true};state.newMessages=false;}(preview?.livePageState||pageState).scores.unread=false;if(currentUser&&!currentUser.isTest){currentUser=null;closeSheets();}scheduleRender(true);}
+function renderStatus(next){
+  if(currentScreen!=='monitor'||!monitorSelection)return;const nextRoom=next.room||{};if(nextRoom.id&&normalizeUID(nextRoom.id)!==monitorSelection.id)return;
+  room={...room,...nextRoom,id:monitorSelection.id};status={...next,room};refreshMonitorLabel();$('room-caption').textContent=['房间 '+room.id,room.owner?cleanText(room.owner):'',room.live==='0'?'暂未开播':''].filter(Boolean).join(' · ');$('phase').textContent=PHASES[next.phase]||'连接中';$('status-dot').className='status-dot '+next.phase;
+  $('room-facts').replaceChildren(make('strong','',cleanText(room.name)||('房间 '+room.id)),make('div','',[room.owner?'主播 '+cleanText(room.owner):'','真实房间 '+room.id].filter(Boolean).join(' · ')),make('div','',cleanText(next.message)||PHASES[next.phase]||''));
+  $('connection-detail').textContent='弹幕端点：'+(next.endpoint||'—')+'；连接次数：'+(next.attempt||0)+'；心跳：'+(next.heartbeats||0)+'；最近接收：'+timeLabel(next.lastReceived)+'。';rememberSavedRoomMetadata(room);
+}
+function tickExpiries(){const now=Date.now(),liveExpired=pruneGiftCapsules(giftCapsules,now),previewExpired=preview?pruneGiftCapsules(preview.giftCapsules,now):false;if(liveExpired||previewExpired||activePins.some(x=>x.expires<=now)||activeFollowPins.some(x=>followExpiry(x)<=now)||chatRows.some(row=>row.type==='crowd'&&row.group.lastMs+crowdWindowMs()<=now)){if(liveExpired||previewExpired)priorityDirty=true;render();}else updateGiftCountdowns();}
+
+// 样例只进临时集合，receiveMessage 一律写实时数据。
+function startPreview(){
+  if(preview)return;pageState[view].snapshot=captureScroll(view);
+  preview={chatGroups:new Map(),giftRecords:new Map(),scoreRecords:new Map(),scoreChecks:new Map(),giftCapsules:new Map(),followCards:new Map(),follows:new Map(follows),history:[],notices:[],sequence:0,followIndex:0,giftRound:0,livePageState:pageState,liveView:view};
+  dirtyHistoryFeeds();pageState=blankPageState();for(const page of PAGES)pageState[page].snapshot={live:true};
+  setView('all');pageState.gifts.snapshot={live:true};$('test-banner').hidden=false;updateRoomControls();pendingScrollRestore={live:true};
+}
+function clearPreview(){
+  if(preview){dirtyHistoryFeeds();clearChatGroups(preview.chatGroups);preview.giftRecords.clear();preview.scoreRecords.clear();preview.scoreChecks.clear();pageState.scores.unread=false;preview.giftCapsules.clear();preview.followCards.clear();preview.history=[];preview.notices=[];preview.followIndex=0;preview.giftRound=0;for(const state of Object.values(pageState)){state.live=true;state.snapshot={live:true};state.newMessages=false;}pendingScrollRestore={live:true};render();}
+  updateTestPanel();
+}
+function exitPreview(){
+  closeSheets();if(!preview)return;const saved=preview;setView(saved.liveView);preview=null;dirtyHistoryFeeds();pageState=saved.livePageState;if(view==='scores')pageState.scores.unread=false;pendingScrollRestore=pageState[view].snapshot;$('test-banner').hidden=true;currentUser=null;render();
+}
+function updateTestPanel(){
+  $('test-state').textContent=(preview?'正在显示本地测试。':'尚未进入测试。')+' 已保存 '+follows.size+' 个关注；'+(follows.size?'轮流模拟这些关注的发言。':'使用临时演示关注，不改动关注名单。')+' 当前最低筛选档位：'+money(settings.giftThreshold)+' 元；关注停留 '+settings.followPinDuration+' 秒，刷屏等待 '+settings.crowdWait+' 秒。';
+  $('test-clear').disabled=!preview;
+}
+function openTestPanel(){if(currentScreen!=='monitor')return;updateTestPanel();openSheet('test-sheet');}
+function testEvent(kind,values){return {kind,roomId:'local-test',index:++testSequence,at:new Date().toISOString(),isTest:true,...values};}
+// 轮着给等级、粉丝牌、贵族，好让 pad 原生还原一眼看得出来。
+function testUserMeta(i){
+  const meta={level:(i*7)%150+1};
+  if(i%3)meta.fanBadge={name:'演示牌',level:(i*3)%30+1};
+  if(i%9===0)meta.noble={level:(i/9|0)%6+1,name:['骑士','子爵','伯爵','公爵','国王','皇帝'][(i/9|0)%6]};
+  if(i%13===0)meta.roomAdmin=true;
+  return meta;
+}
+function addTestSample(kind){
+  startPreview();
+  if(kind==='scores'){
+    setView('all');for(const text of ['#给演示主播 100','#炸12345 20','#给演示主播 50 #炸演示主播 10','今天给主播加油','#给演示主播','#炸 100'])rememberChat(testEvent('chat',{userId:'99000666',user:'[测试] 给分观众',text}),preview);
+    for(const text of ['@给分观众: #给演示主播 100','给分观众： #给演示主播 100'])rememberChat(testEvent('chat',{userId:'99000667',user:'[测试] 引用观众',text}),preview);
+  }
+  if(kind==='chat')for(let i=1;i<=40;i++)rememberChat(testEvent('chat',{userId:'990000'+i,user:'[测试] 观众'+i,text:'第 '+i+' 条单行弹幕 · '+(testSequence+1),userMeta:testUserMeta(i),fields:i%7?{}:{col:String(i/7|0)}}),preview);
+  if(kind==='crowd')for(let i=0;i<5;i++){
+    rememberChat(testEvent('chat',{userId:'9900070'+(i%2+1),user:'[测试] 刷屏观众'+(i%2+1),text:'[测试] 穿插的相同弹幕'}),preview);
+    rememberChat(testEvent('chat',{userId:'99000799',user:'[测试] 普通观众',text:'中间还有其他弹幕 · '+(testSequence+1)}),preview);
+  }
+  if(kind==='follow'){
+    const users=follows.size?[...follows.values()]:[{uid:'99000101',label:'演示关注一'},{uid:'99000102',label:'演示关注二'},{uid:'99000103',label:'演示关注三'}];
+    preview.follows=new Map(users.map(person=>[person.uid,person]));const person=users[preview.followIndex++%users.length],known=followCards.get(person.uid)?.event||history.findLast(e=>uidOf(e)===person.uid);
+    rememberChat(testEvent('chat',{userId:person.uid,user:'[测试] '+(cleanText(person.label)||cleanText(known?.user)||('UID '+person.uid)),text:'这是我的第 '+preview.followIndex+' 次测试发言'}),preview);
+  }
+  if(kind==='admin')rememberChat(testEvent('chat',{userId:'99000999',user:'[测试] 房管',text:'房管发言测试 · '+(testSequence+1),userMeta:{roomAdmin:true}}),preview);
+  if(kind==='notice'){
+    // 五档进场底色 + 房管、超管各一条，方便比对 pad 原生还原。
+    const guests=[['骑士',1],['子爵',2],['伯爵',3],['公爵',4],['游侠',7]];
+    for(const [name,level] of guests)rememberNotice(testEvent('enter',{userId:'9900021'+level,user:'[测试] '+name+'观众',userMeta:{level:level*12,noble:{level,name}}}),preview);
+    rememberNotice(testEvent('enter',{userId:'99000999',user:'[测试] 房管',userMeta:{roomAdmin:true,level:80}}),preview);
+    rememberNotice(testEvent('enter',{userId:'99000998',user:'[测试] 超管',userMeta:{platformAdmin:true,level:90}}),preview);
+  }
+  if(kind==='custom-gift')rememberGift(testEvent('gift',{userId:'99000887',user:'[测试] 未知价送礼者',giftId:'local-test-platinum-unicorn',gift:'白金独角兽',count:'1',combo:'7'}),preview);
+  if(kind==='gift'){
+    preview.giftRound++;const samples=[['99000888','幻兽蛋',200,settings.giftThreshold],['99000889','幻兽蛋',200,settings.giftThreshold],['99000888','低于门槛样例',1,settings.giftThreshold/2]];
+    if(preview.giftRound>=2)samples.push(['99000888','火箭',1,settings.giftThreshold]);
+    for(const [uid,gift,count,amount] of samples)rememberGift(testEvent('gift',{userId:uid,user:'[测试] 送礼者'+(uid==='99000888'?'甲':'乙'),giftId:'test-'+gift,gift,count:String(count),combo:'7',giftReference:{currency:'YUCHI',unitPrice:amount/count,count,nominalAmount:amount,source:'local-test'}}),preview);
+  }
+  setView('all');closeSheets();pageState.all.live=true;pageState.all.newMessages=false;pendingScrollRestore={live:true};render();
+}
+
+function closeSheets(){document.querySelectorAll('dialog[open]').forEach(d=>d.close());}
+function openSheet(id){closeSheets();const dialog=$(id);dialog.showModal();dialog.querySelector('h2')?.focus({preventScroll:true});}
+function toast(text){clearTimeout(toastTimer);$('toast').textContent=text;$('toast').hidden=false;toastTimer=setTimeout(()=>{$('toast').hidden=true;},2600);}
+function resetCustomGiftForm(){editingCustomGiftName=null;$('custom-gift-form').reset();$('save-custom-gift').textContent='添加 / 更新';$('cancel-custom-gift').hidden=true;}
+function saveCustomGifts(rules){
+  const previous=settings;settings=validSettings({...settings,customGifts:rules});const refiltered=updateGiftRules(previous),saved=writeLocal(SETTINGS_KEY,settings);renderCustomGifts();scheduleRender();$('custom-gift-notice').textContent=(saved?'已保存。':'本页已生效；浏览器未允许保存。')+(refiltered?GIFT_REFILTER_NOTICE:'显示档位未变。');
+}
+function renderCustomGifts(){
+  const list=$('custom-gift-list');list.replaceChildren();if(!settings.customGifts.length){list.append(make('p','helper','暂无自定义规则。未知参考价礼物不会进入主页置顶。'));return;}
+  for(const rule of settings.customGifts){
+    const row=make('div','custom-gift-item'),edit=make('button','custom-gift-edit');edit.type='button';edit.append(make('strong','',rule.name),make('small','','显示档位 '+money(rule.tier)+' 元 · 点击编辑'));edit.setAttribute('aria-label','编辑自定义礼物 '+rule.name);
+    edit.addEventListener('click',()=>{editingCustomGiftName=rule.name;$('custom-gift-name').value=rule.name;$('custom-gift-tier').value=rule.tier;$('save-custom-gift').textContent='保存修改';$('cancel-custom-gift').hidden=false;$('custom-gift-name').focus();});
+    const remove=make('button','follow-remove','×');remove.type='button';remove.setAttribute('aria-label','删除自定义礼物 '+rule.name);remove.addEventListener('click',()=>{saveCustomGifts(settings.customGifts.filter(item=>item.name!==rule.name));if(editingCustomGiftName===rule.name)resetCustomGiftForm();});row.append(edit,remove);list.append(row);
+  }
+}
+function fillSettings(){renderCustomGifts();$('gift-threshold').value=settings.giftThreshold;$('gift-maximum').value=settings.giftMaximum??'';$('gift-duration').value=settings.giftDuration;$('follow-duration').value=settings.followPinDuration;$('crowd-wait').value=settings.crowdWait;document.querySelectorAll('[data-setting]').forEach(input=>{input.checked=settings[input.dataset.setting];});}
+function openSettings(){fillSettings();resetCustomGiftForm();$('custom-gift-notice').textContent='';$('settings-notice').textContent='';$('font-notice').textContent='';$('attention-notice').textContent='';$('timing-notice').textContent='';$('open-test').hidden=currentScreen!=='monitor';openSheet('settings-sheet');}
+function persistFollows(){dirtyHistoryFeeds();const saved=writeLocal(FOLLOWS_KEY,[...follows.values()]);for(const uid of followCards.keys())if(!follows.has(uid))followCards.delete(uid);scheduleRender();renderFollowList();return saved;}
+function renderFollowList(){
+  const list=$('follow-list');list.replaceChildren();$('follow-list-title').textContent='已关注 '+follows.size+' 人';if(!follows.size){list.append(make('p','follow-empty','点击聊天昵称，或在上方输入 UID 添加。'));return;}
+  for(const {uid,label} of follows.values()){
+    const row=make('div','follow-item'),person=make('button','follow-person');person.append(make('strong','',cleanText(label)||('UID '+uid)),make('small','','UID '+uid));person.setAttribute('aria-label','编辑关注 '+uid);person.addEventListener('click',()=>{$('follow-uid').value=uid;$('follow-label').value=label;$('follow-uid').focus();});
+    const historyButton=make('button','follow-history','消息');historyButton.setAttribute('aria-label','查看 UID '+uid+' 的消息');historyButton.addEventListener('click',()=>openUser(followCards.get(uid)?.event||history.findLast(e=>uidOf(e)===uid)||{user:label||('UID '+uid),userId:uid,kind:'chat'}));
+    const remove=make('button','follow-remove','×');remove.setAttribute('aria-label','取消关注 UID '+uid);remove.addEventListener('click',()=>{follows.delete(uid);persistFollows();$('follow-notice').textContent='已取消关注 UID '+uid;});row.append(person,historyButton,remove);list.append(row);
+  }
+}
+function openFollows(){renderFollowList();$('follow-notice').textContent='';openSheet('follows-sheet');}
+// ---- 查分追踪 ----
+// /anchors 一次带回全部主播，追踪多少人都只发一个请求。
+const trackNumber=value=>Number(value||0).toLocaleString('zh-CN');
+const trackVisible=()=>view==='track'&&currentScreen==='monitor'&&document.visibilityState==='visible';
+function persistTrack(){writeLocal(TRACK_KEY,[...trackList.values()]);renderTrack();renderTrackPicker();}
+function toggleTrack(uid,name){
+  const id=normalizeUID(uid);if(!id)return;
+  if(trackList.has(id))trackList.delete(id);
+  else if(trackList.size>=TRACK_MAX){toast('最多追踪 '+TRACK_MAX+' 人');return;}
+  else trackList.set(id,{uid:id,label:String(name||'').slice(0,32)});
+  persistTrack();
+}
+function renderTrack(){
+  const feed=$('track-feed'),refresh=$('track-refresh');
+  refresh.disabled=trackBusy;refresh.textContent=trackBusy?'刷新中':'刷新';
+  if(!trackList.size){
+    const empty=make('div','track-empty','还没有追踪任何人');empty.append(make('small',null,'点右上角「添加」，从主播名单里挑'));
+    feed.replaceChildren(empty);$('track-caption').textContent='追踪列表为空';return;
+  }
+  feed.replaceChildren(...[...trackList.values()].map(({uid,label})=>{
+    const anchor=trackAnchors.get(uid),row=make('article','track-row'+(anchor?'':' missing'));
+    row.dataset.key=uid;
+    const main=make('div','track-main');main.append(make('div','track-name',anchor?.name||label||('UID '+uid)));
+    const bits=[];
+    // 简称就是给分指令要打的那几个字，比 UID 有用。
+    if(anchor?.nick?.length)bits.push(anchor.nick.slice(0,3).join(' / '));
+    if(anchor)bits.push('今日 '+trackNumber(anchor.todayFlow));
+    main.append(make('div','track-sub',bits.length?bits.join(' · '):trackAt?'名单里已经没有这个人了':'等待刷新'));
+    const figures=make('div','track-figures');
+    if(!anchor)figures.append(make('div','track-value','—'));
+    else{
+      figures.append(make('div','track-value',trackNumber(anchor.balance)));
+      const delta=trackDelta.get(uid)||0;
+      figures.append(make('div','track-delta'+(delta>0?' up':delta<0?' down':''),delta?(delta>0?'+':'−')+trackNumber(Math.abs(delta)):'无变化'));
+    }
+    row.append(main,figures);return row;
+  }));
+  $('track-caption').textContent='追踪 '+trackList.size+' 人 · '+(trackStamp?'数据 '+timeLabel(trackStamp):'尚未刷新')+(trackNote?' · '+trackNote:'');
+}
+function renderTrackPicker(){
+  const list=$('track-results'),notice=$('track-notice'),all=[...trackAnchors.values()];
+  if(!all.length){list.replaceChildren(make('p','follow-empty',trackBusy?'正在读取主播名单…':'还没读到主播名单，点查分页的「刷新」再试。'));notice.textContent='';return;}
+  const keyword=$('track-keyword').value.trim().toLowerCase();
+  const hits=keyword?all.filter(a=>(a.name||'').toLowerCase().includes(keyword)||a.uid.includes(keyword)||(a.nick||[]).some(n=>n.toLowerCase().includes(keyword))):all;
+  notice.textContent='已追踪 '+trackList.size+' 人 · 名单共 '+all.length+' 位主播'+(keyword?'，筛出 '+hits.length+' 位':'');
+  if(!hits.length){list.replaceChildren(make('p','follow-empty','没有匹配「'+$('track-keyword').value.trim()+'」的主播。'));return;}
+  list.replaceChildren(...hits.map(anchor=>{
+    const on=trackList.has(anchor.uid),hit=make('button','track-hit'+(on?' on':''));
+    hit.type='button';hit.setAttribute('aria-pressed',String(on));
+    hit.append(make('span','track-tick',on?'✓':''));
+    const main=make('div','track-hit-main');
+    main.append(make('div','track-hit-name',anchor.name||('UID '+anchor.uid)));
+    main.append(make('div','track-hit-nick',(anchor.nick?.length?anchor.nick.join(' / '):'UID '+anchor.uid)));
+    hit.append(main,make('span','track-hit-score',trackNumber(anchor.balance)));
+    hit.addEventListener('click',()=>toggleTrack(anchor.uid,anchor.name));
+    return hit;
+  }));
+}
+async function refreshTrack(manual){
+  if(trackBusy||authRedirecting)return;
+  if(!manual&&!trackVisible())return;
+  trackBusy=true;trackNote='';renderTrack();renderTrackPicker();
+  try{
+    const response=await apiFetch('/api/scoreboard/anchors',{headers:{Accept:'application/json'}});
+    const data=await response.json().catch(()=>({}));
+    if(!response.ok)throw new Error(data.error||'读取失败');
+    const next=new Map();
+    for(const anchor of data.anchors||[])if(anchor&&anchor.uid)next.set(String(anchor.uid),anchor);
+    // updatedAt 没变说明是同一份数据，增量保持原样，免得刚出现的 +200 被空刷新抹掉。
+    if(data.updatedAt&&data.updatedAt===trackStamp)trackAt=Date.now();
+    else{
+      for(const [uid,anchor] of next){
+        const before=trackAnchors.get(uid);
+        trackDelta.set(uid,before?anchor.balance-before.balance:0);
+      }
+      trackAnchors=next;trackStamp=data.updatedAt||'';trackAt=Date.now();
+    }
+  }catch(error){trackNote=String(error.message||'刷新失败');}
+  trackBusy=false;renderTrack();renderTrackPicker();scheduleTrack();
+}
+function scheduleTrack(){
+  clearTimeout(trackTimer);trackTimer=0;
+  if(authRedirecting||!trackVisible())return;
+  trackTimer=setTimeout(()=>{trackTimer=0;refreshTrack();},Math.max(3000,TRACK_POLL_MS-(Date.now()-trackAt)));
+}
+function syncTrackPolling(){
+  if(authRedirecting||!trackVisible()){clearTimeout(trackTimer);trackTimer=0;return;}
+  renderTrack();
+  if(!trackAnchors.size||Date.now()-trackAt>=TRACK_POLL_MS)refreshTrack(true);else scheduleTrack();
+}
+function openTrack(){
+  $('track-keyword').value='';renderTrackPicker();openSheet('track-sheet');
+  if(!trackAnchors.size)refreshTrack(true);
+}
+// 弹幕教练：布防时段内，聚合弹幕达到门槛就震一下。
+// 两条硬约束：必须先有过真实点击（进房间那一下就够）；隐藏的文档不得震动，
+// 所以「屏幕常亮」和震动是一套的。Safari 从无 Vibration API，iPhone 只能退到提示音。
+const COACH_PATTERN=[110,70,110],COACH_LOG_MAX=40,COACH_RESUME_MS=3000;
+const COACH_KINDS={buzz:'已提醒',mute:'提醒没发出去',skip:'间隔内跳过',gap:'连接中断'};
+// 文案 -> 上次提醒时间戳；负数表示只写过「间隔内跳过」日志、还没真正提醒。
+let coachSeen=new Map(),coachLog=[],coachLastAt=0,hiddenAt=0,wakeLock=null,wakeLockPending=false,wakeLockVersion=0,wakeNote='',audioCtx=null;
+// 火狐安卓版的 navigator.vibrate 调用返回 true 却不震，特征检测抓不到，只能按 UA 排除。
+const geckoBrowser=()=>/Firefox\/|FxiOS\//.test(navigator.userAgent);
+const coachCanVibrate=()=>typeof navigator.vibrate==='function'&&!geckoBrowser();
+const coachWakeSupported=()=>typeof navigator.wakeLock?.request==='function';
+// 提示音是震不动时的兜底，能震的设备不给这个开关。
+const coachSoundOffered=()=>!coachCanVibrate();
+const coachVisible=()=>view==='coach'&&currentScreen==='monitor';
+const appleDevice=()=>/iP(hone|ad|od)/.test(navigator.userAgent)||navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1;
+function coachOnDuty(at=new Date()){
+  if(!settings.coachArmed)return false;
+  const start=clockMinutes(settings.coachStart),end=clockMinutes(settings.coachEnd);
+  if(start===null||end===null)return false;
+  const now=at.getHours()*60+at.getMinutes();
+  return start===end||(start<end?now>=start&&now<end:now>=start||now<end);
+}
+function coachActivate(){
+  if(!settings.coachSound||!coachSoundOffered())return;
+  try{const Ctor=window.AudioContext||window.webkitAudioContext;if(!Ctor)return;if(!audioCtx)audioCtx=new Ctor();if(audioCtx.state!=='running')audioCtx.resume().then(renderCoachStatus).catch(()=>{});}catch(_){}
+}
+function coachBeep(){
+  try{
+    const Ctor=window.AudioContext||window.webkitAudioContext;if(!Ctor)return false;
+    if(!audioCtx)audioCtx=new Ctor();
+    if(audioCtx.state!=='running'){audioCtx.resume().catch(()=>{});return false;}
+    const now=audioCtx.currentTime,osc=audioCtx.createOscillator(),gain=audioCtx.createGain();
+    osc.type='sine';osc.frequency.setValueAtTime(880,now);
+    gain.gain.setValueAtTime(.0001,now);gain.gain.exponentialRampToValueAtTime(.3,now+.012);gain.gain.exponentialRampToValueAtTime(.0001,now+.34);
+    osc.connect(gain);gain.connect(audioCtx.destination);osc.start(now);osc.stop(now+.38);
+    return true;
+  }catch(_){return false;}
+}
+function coachBuzz(){
+  let fired=false;
+  // 隐藏时系统本来就不让震。
+  if(settings.coachVibrate&&coachCanVibrate()&&document.visibilityState==='visible'){try{fired=navigator.vibrate(COACH_PATTERN)!==false;}catch(_){}}
+  // 开关藏起来时一并停掉，否则换台能震的手机会被残留的 coachSound 响一声。
+  if(settings.coachSound&&coachSoundOffered()&&coachBeep())fired=true;
+  return fired;
+}
+function coachNote(kind,text){
+  coachLog.unshift({at:Date.now(),kind,text});
+  if(coachLog.length>COACH_LOG_MAX)coachLog.length=COACH_LOG_MAX;
+  renderCoachLog();
+}
+function coachWatch(group,info){
+  if(!coachOnDuty()||info.count<settings.coachThreshold)return;
+  // 去重认文案不认分组：静默超过刷屏等待就会拆出新组换新 key，认组会反复提醒同一句话。
+  // 只要还在聚合就一直续期，直到安静满一个最短间隔。
+  const now=Date.now(),gap=settings.coachGap*1000,mark=coachSeen.get(group.text)||0;
+  if(mark>0&&now-mark<gap){coachSeen.set(group.text,now);return;}
+  const text=cleanText(group.text).slice(0,60)+' · '+info.count+' 条';
+  // 刚提醒过别的就让开，间隔过去还会轮到它，所以不记成「已提醒」。
+  if(now-coachLastAt<gap){if(!mark){coachSeen.set(group.text,-now);coachNote('skip',text);}return;}
+  coachSeen.set(group.text,now);coachLastAt=now;coachNote(coachBuzz()?'buzz':'mute',text);
+}
+const wantsWakeLock=()=>settings.coachWakeLock&&coachWakeSupported()&&currentScreen==='monitor'&&document.visibilityState==='visible';
+async function acquireWakeLock(){
+  if(wakeLock||wakeLockPending||!wantsWakeLock())return;
+  wakeLockPending=true;const version=wakeLockVersion;
+  try{
+    const sentinel=await navigator.wakeLock.request('screen');
+    if(version!==wakeLockVersion||!wantsWakeLock()){await sentinel.release().catch(()=>{});return;}
+    wakeLock=sentinel;wakeNote='';
+    sentinel.addEventListener('release',()=>{if(wakeLock===sentinel)wakeLock=null;renderCoachStatus();});
+  }catch(error){if(version===wakeLockVersion){wakeLock=null;wakeNote=cleanText(error?.message)||'系统拒绝了申请';}}
+  finally{wakeLockPending=false;if(version!==wakeLockVersion&&wantsWakeLock())acquireWakeLock();renderCoachStatus();}
+}
+function syncWakeLock(){
+  if(wantsWakeLock()){acquireWakeLock();return;}
+  wakeLockVersion++;
+  const sentinel=wakeLock;wakeLock=null;wakeNote='';if(sentinel)sentinel.release().catch(()=>{});
+  renderCoachStatus();
+}
+function resumeFromBackground(){
+  const away=hiddenAt?Date.now()-hiddenAt:0;hiddenAt=0;
+  if(currentScreen!=='monitor'||!monitorWantsConnection||authRedirecting)return;
+  if(away<COACH_RESUME_MS&&stream)return;
+  // 息屏后 SSE 被悄悄掐断而 readyState 仍是 1，浏览器要三五十秒才反应过来。
+  // 回前台直接重开一条，服务端会补回最近 300 条。
+  const seconds=Math.round(away/1000);
+  connectRoomStream();
+  if(seconds>=COACH_RESUME_MS/1000){toast('离开 '+seconds+' 秒 · 正在重连补齐');coachNote('gap','离开 '+seconds+' 秒后重新连接');}
+}
+function coachState(level,label,detail){
+  const row=make('div','coach-state '+level),text=make('span');
+  row.append(make('b',null,level==='ok'?'✓':level==='bad'?'!':'·'));
+  text.append(make('strong',null,label),document.createTextNode(' · '+detail));
+  row.append(text);return row;
+}
+function renderCoachStatus(){
+  if(!coachVisible())return;
+  const rows=[],running=audioCtx?.state==='running';
+  if(!settings.coachVibrate)rows.push(coachState('off','震动','已关闭'));
+  else if(coachCanVibrate())rows.push(coachState('ok','震动','浏览器支持；页面必须留在前台，息屏或切走时系统不允许震动'));
+  else rows.push(coachState('bad','震动',appleDevice()?'iPhone / iPad 的 Safari 从未实现震动接口，网页震不了，只能靠提示音':geckoBrowser()?'火狐 129 起已移除震动实现，安卓版虽然还留着接口但调用后不会真震，请改用提示音或换 Chrome':'此浏览器不提供震动接口，只能靠提示音'));
+  // 用不上的开关是藏起来的，状态里也别提，免得和界面对不上。
+  if(coachSoundOffered()){
+    if(!settings.coachSound)rows.push(coachState('off','提示音','已关闭'));
+    else rows.push(coachState(running?'ok':'off','提示音',running?'已就绪；iPhone 侧边静音键拨到静音时仍然不会响':'点一下页面任意位置解锁声音'));
+  }
+  if(coachWakeSupported()){
+    if(!settings.coachWakeLock)rows.push(coachState('off','屏幕常亮','已关闭'));
+    else if(wakeLock)rows.push(coachState('ok','屏幕常亮','正在生效，本页不会自动息屏'));
+    else rows.push(coachState('off','屏幕常亮',wakeNote?'暂时没生效 · '+wakeNote:currentScreen==='monitor'?'等页面回到前台':'进入房间后生效'));
+  }
+  $('coach-status').replaceChildren(...rows);
+}
+function renderCoachDuty(){
+  if(!coachVisible())return;
+  const box=$('coach-duty'),on=coachOnDuty(),start=clockMinutes(settings.coachStart),end=clockMinutes(settings.coachEnd);
+  const span=start===end?'全天':settings.coachStart+' – '+settings.coachEnd+(start>end?'（次日）':'');
+  box.className='coach-duty'+(on?' on':'');
+  box.textContent=!settings.coachArmed?'未布防 · 时段 '+span:on?'布防中 · '+span+' · 聚合满 '+settings.coachThreshold+' 条就提醒':'已布防，还没到时段 · '+span;
+}
+function renderCoachLog(){
+  if(!coachVisible())return;
+  if(!coachLog.length){$('coach-log').replaceChildren(make('p','coach-log-empty','还没有触发过提醒'));return;}
+  $('coach-log').replaceChildren(...coachLog.map(item=>{
+    const row=make('div','coach-log-row '+item.kind);
+    row.append(make('time',null,timeLabel(item.at)),make('p',null,(COACH_KINDS[item.kind]||item.kind)+' · '+item.text));
+    return row;
+  }));
+}
+// 只显示这台设备、这个连接下真能用的控件。判断一律走能力检测，
+// 换成 https 或换台设备打开，对应的卡片自己就冒出来。
+function applyCoachAvailability(){
+  const wake=coachWakeSupported();
+  $('coach-wake-live').hidden=!wake;
+  $('coach-wake-hint').hidden=wake;
+  if(!wake)$('coach-wake-hint').textContent=(window.isSecureContext?'此浏览器不支持屏幕常亮（需要 Chrome 84+ / Safari 16.4+）。':'当前是 http:// 地址，浏览器只在 HTTPS 下开放屏幕常亮。')
+    +'请到系统设置里把息屏时间调长或设成「永不」，并让手机保持充电。息屏会让系统挂起页面、悄悄掐断弹幕连接，这是手机上漏消息的主要原因；回到前台时本页会立刻重连，并补齐服务端保留的最近 300 条。';
+  $('coach-sound-row').hidden=!coachSoundOffered();
+}
+function fillCoach(){
+  $('coach-start').value=settings.coachStart;$('coach-end').value=settings.coachEnd;
+  $('coach-threshold').value=settings.coachThreshold;$('coach-gap').value=settings.coachGap;
+  document.querySelectorAll('[data-coach]').forEach(input=>{input.checked=settings[input.dataset.coach];});
+  $('coach-vibrate').disabled=!coachCanVibrate();$('coach-wake').disabled=!coachWakeSupported();
+  applyCoachAvailability();
+}
+function syncCoach(){if(!coachVisible())return;fillCoach();renderCoachDuty();renderCoachStatus();renderCoachLog();}
+function saveCoachWindow(){
+  const start=$('coach-start').value,end=$('coach-end').value,threshold=Number($('coach-threshold').value),gap=Number($('coach-gap').value);
+  if(clockMinutes(start)===null||clockMinutes(end)===null){$('coach-notice').textContent='请把开始和结束时间填完整。';return;}
+  if(!Number.isInteger(threshold)||threshold<5||threshold>500||!Number.isInteger(gap)||gap<1||gap>600){$('coach-notice').textContent='门槛填 5 至 500 条，最短间隔填 1 至 600 秒。';return;}
+  settings=validSettings({...settings,coachStart:start,coachEnd:end,coachThreshold:threshold,coachGap:gap});
+  const saved=writeLocal(SETTINGS_KEY,settings);fillCoach();renderCoachDuty();
+  $('coach-notice').textContent=saved?'已保存。':'本页已生效；浏览器未允许保存。';
+}
+function updateUserButtons(){const has=follows.has(uidOf(currentUser||{}));$('user-follow-toggle').textContent=has?'保存备注':'特别关注';$('user-unfollow').hidden=!has;}
+function openUser(e){
+  currentUser=e;const uid=uidOf(e),data=e.isTest&&preview?preview:{chatGroups,history,followCards};$('user-follow-form').hidden=!!e.isTest;$('user-name').textContent=safeName(e);$('user-uid').textContent='UID '+uid;$('user-meta').textContent=[e.isTest?'[本地测试]':'',e.userMeta?.roomAdmin?'[房管]':'',e.userMeta?.platformAdmin?'[超管]':''].filter(Boolean).join(' ');$('user-meta').className='user-meta-tags';$('user-label').value=follows.get(uid)?.label||'';updateUserButtons();$('user-notice').textContent='';
+  const available=new Map();for(const group of data.chatGroups.values())for(const item of group.originals)if(uidOf(item.event)===uid)available.set(eventKey(item.event),item.event);for(const item of data.history)if(uidOf(item)===uid)available.set(eventKey(item),item);const card=data.followCards.get(uid);if(card)available.set(eventKey(card.event),card.event);
+  const messages=[...available.values()].sort(compareNewest).slice(0,300);$('user-history-note').textContent=messages.length?'当前页面可用 '+messages.length+' 条原始聊天（最多显示 300 条）。':'此人的下一条聊天会显示在特别关注区。';
+  $('user-history').replaceChildren(...messages.map(item=>{const box=make('article','original-item'),time=make('div','detail-time',timeLabel(item.at)),text=make('button','card-action',cleanText(item.text)||'（空白消息）');text.addEventListener('click',()=>openDetail(item));box.append(time,text);return box;}));openSheet('user-sheet');
+}
+function appendRaw(parent,event){const raw=make('details','raw-details');raw.append(make('summary','','查看原始消息与元数据'),make('pre','',JSON.stringify(event,null,2)));parent.append(raw);}
+function openDetail(e){
+  if(e.kind!=='chat'&&e.kind!=='gift')return;$('detail-title').textContent=(e.isTest?'[测试] ':'')+(e.kind==='gift'?'礼物详情':'聊天详情');const body=$('detail-body');body.replaceChildren(make('div','detail-time','接收于 '+timeLabel(e.at)+' · 房间 '+(e.roomId||roomID||'—')),identity(e),make('div','detail-content',e.kind==='chat'?eventData(e).text||'（空白消息）':giftText(e)));
+  const info=make('div','detail-meta');if(e.userId)info.append(make('div','','UID '+e.userId));if(e.kind==='gift'){info.append(make('div','',amountLabel(e)),make('div','','本条数量 '+(e.count||'1')+(e.combo?' · 连击 '+e.combo:'')+'；数量与连击不相乘。'));if(e.giftReference)info.append(make('div','','参考来源：'+(e.isTest?'本地测试金额':GIFT_SOURCES[e.giftReference.source]||'已核实的备用目录')));
+    if(e.triggeredBy)info.append(make('div','','这件是 '+e.triggeredBy+' 送出后立刻开出的产物，金额已经算在 '+e.triggeredBy+' 那条上，这里不重复计价。'));}
+  body.append(info);appendRaw(body,e);openSheet('detail-sheet');
+}
+function openGiftCapsule(capsule){
+  if(capsule.events===1){openDetail(capsule.event);return;}
+  const records=capsule.event.isTest&&preview?preview.giftRecords:giftRecords,originals=[...records.values()].filter(e=>giftCapsuleKey(e)===capsule.key&&eventData(e).at>=capsule.startMs&&eventData(e).at<=capsule.lastMs&&giftExpiry(e,settings)!==null).sort((a,b)=>compareNewest(b,a));
+  $('detail-title').textContent=(capsule.event.isTest?'[测试] ':'')+'礼物胶囊';const body=$('detail-body');body.replaceChildren(identity(capsule.event),make('div','detail-content',(eventData(capsule.event).gift||'礼物')+' ×'+capsule.quantity),make('div','detail-meta','累计 '+capsule.events+' 次合格赠送，只相加原始数量，不乘连击。最后接收于 '+timeLabel(capsule.lastMs)+'，到期 '+timeLabel(capsule.expires)+'。'),make('p','helper','当前保留 '+originals.length+' / '+capsule.events+' 条独立记录；单条参考金额与原始元数据见下方。礼物页仍按单条记录保存。'));
+  for(const event of originals){const item=make('article','original-item'),button=make('button','card-action',giftText(event)+' · '+amountLabel(event));button.addEventListener('click',()=>openDetail(event));item.append(make('div','detail-time',timeLabel(event.at)),button);body.append(item);}openSheet('detail-sheet');
+}
+function openAggregate(row){
+  if(row.count===1&&row.type!=='crowd'){openDetail(row.event);return;}
+  const ids=new Set(row.entries.map(x=>x.id)),originals=row.group.originals.filter(x=>ids.has(x.entryID)),participants=new Map();
+  for(const {event} of originals){const uid=uidOf(event);if(!uid)continue;const person=participants.get(uid);if(person){person.count++;if(compareNewest(event,person.event)<=0)person.event=event;}else participants.set(uid,{event,count:1});}
+  $('detail-title').textContent=row.type==='crowd'?'相同弹幕':'重复弹幕';const body=$('detail-body');body.replaceChildren(make('div','detail-time',timeLabel(row.group.startMs)+'–'+timeLabel(row.group.lastMs)+' · 原文接收时间范围'),make('div','detail-content',(row.group.text||'（空白消息）')+' x '+row.count),make('div','detail-meta','累计 '+row.count+' 条消息；当前原文中有 '+participants.size+' 位可识别用户。'));
+  const people=make('div','participant-list');for(const [uid,person] of participants){const button=make('button','participant',safeName(person.event)+' · 原文 '+person.count+' 条 · UID '+uid);button.addEventListener('click',()=>openUser(person.event));people.append(button);}body.append(people);
+  body.append(make('p','helper','以下为当前保留的 '+originals.length+' / '+row.count+' 条原文。每组保留最近 300 条原文及对应参与者；更早只保留普通消息累计数，已归档计数不追溯应用之后的关注变更。多人刷屏在最后一条相同弹幕后超过设置的刷屏等待时间消失（默认 10 秒）。'));
+  for(const {event} of originals){const item=make('article','original-item');item.append(make('div','detail-time',timeLabel(event.at)),identity(event),make('p','',event.text||'（空白消息）'));appendRaw(item,event);body.append(item);}openSheet('detail-sheet');
+}
+async function copyText(text,notice){try{if(navigator.clipboard&&window.isSecureContext)await navigator.clipboard.writeText(text);else{const active=document.querySelector('dialog[open]')||document.body,input=make('textarea');input.value=text;input.setAttribute('aria-label','复制内容');input.style.cssText='position:fixed;opacity:0;width:1px;height:1px;';active.append(input);input.select();const copied=document.execCommand('copy');input.remove();if(!copied)throw new Error('copy');}$(notice).textContent='已复制';}catch(_){$(notice).textContent='请长按上方地址或 UID 复制';}}
+let authRedirecting=false,sessionChecking=false;
+function returnToLogin(){if(authRedirecting)return;authRedirecting=true;monitorWantsConnection=false;clearTimeout(trackTimer);trackTimer=0;closeRoomStream();cancelRoomResolve();location.replace('/login?expired=1&next='+encodeURIComponent(location.pathname+location.search));}
+async function apiFetch(path,options){const response=await fetch(path,options);if(response.status===401){returnToLogin();throw new Error('登录已过期，请重新登录');}return response;}
+async function checkSession(){if(sessionChecking||authRedirecting)return;sessionChecking=true;try{await apiFetch('/api/access');}catch(_){}finally{sessionChecking=false;}}
+async function loadAccess(){
+  const current=location.origin+'/',localHost=['localhost','127.0.0.1','[::1]'].includes(location.hostname);
+  try{const response=await apiFetch('/api/access');if(!response.ok)throw new Error('access');const access=await response.json(),candidates=Array.isArray(access.lan)?access.lan:[],selected=localHost?(candidates[0]||access.local||current):current,options=[...new Set([selected,...candidates])];$('share-url').value=selected;$('share-select').replaceChildren(...options.map(url=>{const option=make('option','',url);option.value=url;return option;}));$('share-select').value=selected;$('share-select').hidden=options.length<2;$('access-hint').textContent=localHost?(candidates.length?'手机与这台电脑连接同一局域网，打开下方地址。':'当前没有可用的局域网地址；可在启动窗口查看监听地址。'):'此地址与当前页面相同，可在能访问本服务的手机浏览器中打开。';accessLoaded=true;}
+  catch(_){$('share-url').value=current;$('access-hint').textContent=localHost?'暂时无法获取局域网地址；可在启动窗口查看。':'在手机浏览器中打开当前页面地址即可。';}
+}
+async function resolveSavedRoomInput(input,signal){
+  const response=await apiFetch('/api/resolve',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({room:input}),signal}),resolved=await response.json();if(!response.ok)throw new Error(resolved.error||'房间查询失败，请检查房间号或链接。');return resolved;
+}
+function openRoom(){if(currentScreen!=='monitor')return;$('room-notice').textContent='';$('share-notice').textContent='';updateRoomControls();openSheet('room-sheet');if(!accessLoaded)loadAccess();}
+function updateRoomControls(){
+  $('stop').disabled=!stream&&!selectionResolveController;$('connect').disabled=!monitorSelection||!!selectionResolveController;$('connect').textContent=stream?'重新连接':'继续接收';if(preview)$('test-banner').querySelector('span').textContent=stream?'测试预览 · 实时仍在接收':'测试预览 · 实时已暂停';
+}
+function closeRoomStream(){subscriptionVersion++;selectionResolveController?.abort();selectionResolveController=null;if(stream){stream.close();stream=null;}updateRoomControls();}
+function resetMonitorData(){
+  closeSheets();preview=null;currentUser=null;$('test-banner').hidden=true;pageState=blankPageState();
+  cancelScheduledRender();clearTimeout(chatExpiryTimer);chatExpiryTimer=0;clearTimeout(giftCountdownTimer);giftCountdownTimer=0;clearRoom();sequence=0;setView('all');pendingScrollRestore={live:true};render();nextRenderAt=0;
+  // 提醒记录只在换房间时清空：重连会回放 300 条，此时清掉会把同一波刷屏重新提醒一次。
+  coachSeen.clear();coachLastAt=0;coachLog=[];hiddenAt=0;syncWakeLock();
+}
+function enterSavedRoom(entry){
+  const id=normalizeUID(entry?.id);if(!id)return;if(currentScreen==='monitor'&&monitorSelection?.id===id&&stream)return;
+  closeRoomStream();cancelRoomResolve();monitorSelection={...entry,id};roomID=id;roomGeneration=null;room={id,input:id,name:entry.name||'',owner:entry.owner||''};status={room,phase:'connecting'};currentScreen='monitor';applyLayout();$('transport-alert').hidden=true;$('open-test').hidden=false;resetMonitorData();renderStatus(status);document.title=(entry.note||entry.name||('房间 '+id))+' · 斗鱼弹幕台';connectRoomStream();
+}
+function showMyRooms(){
+  monitorWantsConnection=false;closeRoomStream();cancelRoomResolve();currentScreen='home';monitorSelection=null;roomID='';roomGeneration=null;room={};status={};$('open-test').hidden=true;$('transport-alert').hidden=true;resetMonitorData();savedRooms=readSavedRooms();applyLayout();document.title='我的房间 · 斗鱼弹幕台';
+}
+function readRoomEnvelope(event){try{return JSON.parse(event.data);}catch(_){return null;}}
+function adoptResolvedSelection(previous,resolved){
+  const id=normalizeUID(resolved.id);if(!id)throw new Error('没有取得有效房间号');const entries=readSavedRooms(),original=entries.find(entry=>entry.id===previous.id),canonical=entries.find(entry=>entry.id===id),next={id,resolved:true,note:canonical?canonical.note:original?original.note:previous.note||'',name:cleanText(resolved.name||canonical?.name||original?.name||'').slice(0,100),owner:cleanText(resolved.owner||canonical?.owner||original?.owner||'').slice(0,48)};
+  if(canonical){const updated=entries.filter(entry=>entry.id!==previous.id||previous.id===id).map(entry=>entry.id===id?next:entry);persistSavedRooms(updated);}
+  else if(original)persistSavedRooms(entries.map(entry=>entry.id===previous.id?next:entry));
+  monitorSelection=next;roomID=id;room={...resolved,id};refreshMonitorLabel();document.title=(next.note||next.name||('房间 '+id))+' · 斗鱼弹幕台';return id;
+}
+async function connectRoomStream(){
+  if(currentScreen!=='monitor'||!monitorSelection||authRedirecting)return;closeRoomStream();monitorWantsConnection=true;const version=subscriptionVersion,selection=monitorSelection;let selectedID=selection.id;$('room-notice').textContent='';$('transport-alert').hidden=true;
+  if(!selection.resolved){
+    const controller=new AbortController();selectionResolveController=controller;updateRoomControls();renderStatus({...status,room,phase:'resolving',message:'正在查询房间 '+selection.id});
+    try{const resolved=await resolveSavedRoomInput(selection.id,controller.signal);if(version!==subscriptionVersion||currentScreen!=='monitor'||monitorSelection?.id!==selection.id)return;selectionResolveController=null;selectedID=adoptResolvedSelection(selection,resolved);}
+    catch(error){if(version!==subscriptionVersion||error.name==='AbortError')return;selectionResolveController=null;monitorWantsConnection=false;updateRoomControls();$('transport-alert').textContent=cleanText(error.message)||'房间查询失败，请稍后重试。';$('transport-alert').hidden=false;renderStatus({...status,room,phase:'error',message:$('transport-alert').textContent});return;}
+  }
+  if(version!==subscriptionVersion||currentScreen!=='monitor'||!monitorWantsConnection)return;const source=new EventSource('/events?room='+encodeURIComponent(selectedID));stream=source;updateRoomControls();renderStatus({...status,room,phase:'connecting',message:'正在连接房间 '+selectedID});
+  const current=()=>stream===source&&subscriptionVersion===version&&currentScreen==='monitor'&&monitorSelection?.id===selectedID;
+  const envelope=event=>{if(!current())return null;const value=readRoomEnvelope(event);return value&&normalizeUID(value.roomId)===selectedID&&typeof value.generation==='string'&&value.generation?value:null;};
+  source.addEventListener('reset',event=>{const value=envelope(event);if(!value)return;if(roomGeneration!==value.generation){roomGeneration=value.generation;clearRoom();}roomID=selectedID;});
+  source.addEventListener('status',event=>{const value=envelope(event);if(value&&value.generation===roomGeneration&&value.data)renderStatus(value.data);});
+  source.addEventListener('message',event=>{const value=envelope(event);if(!value||value.generation!==roomGeneration||!value.data)return;const data=value.data;if(data.roomId&&normalizeUID(data.roomId)!==selectedID)return;receiveMessage({...data,roomId:selectedID,generation:value.generation});});
+  source.addEventListener('subscription-error',event=>{if(!current())return;const value=readRoomEnvelope(event);if(value?.roomId&&normalizeUID(value.roomId)!==selectedID)return;const message=cleanText(value?.data?.message)||'暂时无法进入该房间，请返回列表重试。';monitorWantsConnection=false;closeRoomStream();$('transport-alert').textContent=message;$('transport-alert').hidden=false;renderStatus({...status,room,phase:'error',message});});
+  source.addEventListener('auth-expired',()=>{if(current())returnToLogin();});
+  source.onopen=()=>{if(current())$('transport-alert').hidden=true;};source.onerror=()=>{if(!current())return;$('transport-alert').textContent='页面连接中断，正在恢复…';$('transport-alert').hidden=false;checkSession();};
+}
+function pauseRoomStream(){if(!monitorSelection)return;monitorWantsConnection=false;closeRoomStream();$('transport-alert').hidden=true;$('room-notice').textContent='本页已暂停接收。';renderStatus({...status,room,phase:'stopped',message:'本页已暂停接收。'});}
+for(const page of PAGES)feedOf(page).addEventListener('scroll',()=>{if(view!==page)return;const feed=feedOf(page),state=pageState[page];state.live=page==='coach'?false:page==='gifts'||page==='track'?feed.scrollTop<40:feed.scrollHeight-feed.scrollTop-feed.clientHeight<55;if(state.live)state.newMessages=false;state.snapshot=captureScroll(page);updateNewButtons();},{passive:true});
+for(const page of PAGES)$('nav-'+page).addEventListener('click',()=>setView(page));
+document.querySelector('.tabs').addEventListener('keydown',e=>{if(['ArrowLeft','ArrowRight','Home','End'].includes(e.key)){e.preventDefault();setView(e.key==='Home'?PAGES[0]:e.key==='End'?PAGES[PAGES.length-1]:PAGES[(PAGES.indexOf(view)+(e.key==='ArrowRight'?1:PAGES.length-1))%PAGES.length]);$('nav-'+view).focus();}});
+$('new-chat').addEventListener('click',()=>jumpLive('all'));$('new-gift').addEventListener('click',()=>jumpLive('gifts'));$('new-score').addEventListener('click',()=>jumpLive('scores'));
+window.addEventListener('resize',()=>{if(pageState[view].live)jumpLive(view);});
+$('home-settings').addEventListener('click',openSettings);$('add-room').addEventListener('click',()=>openSavedRoomEditor());$('saved-room-form').addEventListener('submit',saveSavedRoom);$('remove-saved-room').addEventListener('click',removeSavedRoom);$('saved-room-sheet').addEventListener('close',()=>{if(!$('saved-room-sheet').open)cancelRoomResolve();});$('back-rooms').addEventListener('click',showMyRooms);
+$('track-add').addEventListener('click',openTrack);
+$('track-refresh').addEventListener('click',()=>refreshTrack(true));
+$('track-form').addEventListener('submit',e=>{e.preventDefault();$('track-keyword').blur();});
+$('track-keyword').addEventListener('input',renderTrackPicker);
+$('track-sheet').addEventListener('close',syncTrackPolling);
+$('coach-save').addEventListener('click',saveCoachWindow);
+$('coach-test').addEventListener('click',()=>{coachActivate();const fired=coachBuzz();renderCoachStatus();toast(fired?'已发出提醒':'这台设备现在发不出提醒，看下面的状态说明');});
+document.querySelectorAll('[data-coach]').forEach(input=>input.addEventListener('change',()=>{
+  settings=validSettings({...settings,[input.dataset.coach]:input.checked});
+  if(!writeLocal(SETTINGS_KEY,settings))toast('浏览器未允许保存，本次页面仍然生效');
+  if(input.dataset.coach==='coachSound'&&input.checked)coachActivate();
+  syncWakeLock();renderCoachDuty();renderCoachStatus();
+}));
+// 震动需要粘性用户激活，进房间点的那一下就够；顺便解锁 iPhone 的音频上下文。
+document.addEventListener('click',coachActivate,{capture:true,passive:true});
+$('open-room').addEventListener('click',openRoom);$('open-follows').addEventListener('click',openFollows);$('open-settings').addEventListener('click',openSettings);
+document.querySelectorAll('[data-close]').forEach(button=>button.addEventListener('click',()=>button.closest('dialog').close()));
+document.querySelectorAll('dialog').forEach(dialog=>dialog.addEventListener('click',e=>{if(e.target===dialog)dialog.close();}));
+$('font-size').addEventListener('input',e=>changeFontSize(e.target.value));
+document.querySelectorAll('[data-font-size]').forEach(button=>button.addEventListener('click',()=>changeFontSize(button.dataset.fontSize)));
+document.querySelectorAll('[data-layout-choice]').forEach(button=>button.addEventListener('click',()=>changeLayout(button.dataset.layoutChoice)));
+$('rail-toggle').addEventListener('click',toggleRail);
+$('open-test').addEventListener('click',openTestPanel);$('test-panel').addEventListener('click',openTestPanel);$('test-exit').addEventListener('click',exitPreview);$('test-return').addEventListener('click',exitPreview);$('test-clear').addEventListener('click',clearPreview);
+for(const kind of ['chat','follow','admin','gift','custom-gift','notice','crowd','scores'])$('test-'+kind).addEventListener('click',()=>addTestSample(kind));
+document.querySelectorAll('[data-theme-choice]').forEach(button=>button.addEventListener('click',()=>{settings.theme=button.dataset.themeChoice;applyTheme();const saved=writeLocal(SETTINGS_KEY,settings);$('settings-notice').textContent=saved?'主题已保存。':'本次页面已生效；浏览器未允许保存。';}));
+document.querySelectorAll('[data-setting]').forEach(input=>input.addEventListener('change',()=>{settings=validSettings({...settings,[input.dataset.setting]:input.checked});applyLayout();dirtyHistoryFeeds();const saved=writeLocal(SETTINGS_KEY,settings);scheduleRender();$('attention-notice').textContent=saved?'已立即应用并保存。':'本次页面已生效；浏览器未允许保存。';}));
+$('timing-form').addEventListener('submit',e=>{e.preventDefault();settings=validSettings({...settings,followPinDuration:Number($('follow-duration').value),crowdWait:Number($('crowd-wait').value)});chatFeedDirty=true;priorityDirty=true;const saved=writeLocal(SETTINGS_KEY,settings);scheduleRender();$('timing-notice').textContent=(saved?'已保存。':'本页已生效；浏览器未允许保存。')+'按最后一条相关发言的原接收时间重新计算显示时长。';});
+$('cancel-custom-gift').addEventListener('click',resetCustomGiftForm);
+$('custom-gift-form').addEventListener('submit',e=>{e.preventDefault();const name=$('custom-gift-name').value.trim(),tier=Number($('custom-gift-tier').value);if(!name||$('custom-gift-tier').value===''||!Number.isFinite(tier)||tier<0||tier>100000000){$('custom-gift-notice').textContent='请输入完整礼物名和 0 至 100000000 的显示档位。';return;}const rules=new Map(settings.customGifts.map(rule=>[rule.name,rule.tier]));if(editingCustomGiftName!==null&&editingCustomGiftName!==name)rules.delete(editingCustomGiftName);rules.set(name,tier);saveCustomGifts([...rules].map(([name,tier])=>({name,tier})));resetCustomGiftForm();});
+$('settings-form').addEventListener('submit',e=>{e.preventDefault();const minimum=Number($('gift-threshold').value),maximum=$('gift-maximum').value===''?null:Number($('gift-maximum').value);if(maximum!==null&&maximum<minimum){$('settings-notice').textContent='最高筛选档位不能低于最低筛选档位。';return;}const previous=settings;settings=validSettings({...settings,giftThreshold:minimum,giftMaximum:maximum,giftDuration:Number($('gift-duration').value)});const refiltered=updateGiftRules(previous),saved=writeLocal(SETTINGS_KEY,settings);scheduleRender();$('settings-notice').textContent=(saved?'已保存。':'本页已生效；浏览器未允许保存。')+(refiltered?GIFT_REFILTER_NOTICE:'胶囊按最后一次合格赠送的原接收时间计时，修改时长不清零累计数量。');});
+$('restore-settings').addEventListener('click',()=>{const previous=settings;settings={...settings,giftThreshold:100,giftMaximum:null,giftDuration:100};const refiltered=updateGiftRules(previous);fillSettings();const saved=writeLocal(SETTINGS_KEY,settings);scheduleRender();$('settings-notice').textContent=(saved?'已恢复默认：100 元档位至不限，停留 100 秒。':'本次已恢复默认；浏览器未允许保存。')+(refiltered?GIFT_REFILTER_NOTICE:'');});
+$('follow-form').addEventListener('submit',e=>{e.preventDefault();const uid=normalizeUID($('follow-uid').value);if(!uid){$('follow-notice').textContent='请输入有效的数字 UID。';return;}const label=$('follow-label').value.trim();follows.set(uid,{uid,label});const saved=persistFollows();$('follow-notice').textContent=saved?'已关注 '+(cleanText(label)||('UID '+uid))+'。':'本页已关注；浏览器未允许保存。';$('follow-uid').value='';$('follow-label').value='';});
+$('user-follow-form').addEventListener('submit',e=>{e.preventDefault();if(!currentUser||currentUser.isTest)return;const uid=uidOf(currentUser);if(!uid)return;follows.set(uid,{uid,label:$('user-label').value.trim()});const saved=persistFollows();updateUserButtons();$('user-notice').textContent=saved?'已保存特别关注。':'本页已关注；浏览器未允许保存。';});
+$('user-unfollow').addEventListener('click',()=>{if(!currentUser||currentUser.isTest)return;follows.delete(uidOf(currentUser));persistFollows();updateUserButtons();$('user-notice').textContent='已取消特别关注。';});
+$('copy-uid').addEventListener('click',()=>{if(currentUser)copyText(uidOf(currentUser),'user-notice');});
+$('connect').addEventListener('click',connectRoomStream);$('stop').addEventListener('click',pauseRoomStream);
+$('share-select').addEventListener('change',()=>{$('share-url').value=$('share-select').value;$('share-notice').textContent='';});$('copy-url').addEventListener('click',()=>copyText($('share-url').value,'share-notice'));
+window.addEventListener('storage',event=>{if(event.key!==ROOMS_KEY)return;savedRooms=readSavedRooms();renderSavedRooms();refreshMonitorLabel();});
+window.addEventListener('pagehide',()=>{closeRoomStream();cancelRoomResolve();});
+setInterval(()=>{tickExpiries();renderCoachDuty();},1000);
+document.addEventListener('visibilitychange',()=>{
+  if(document.visibilityState==='visible'){tickExpiries();checkSession();resumeFromBackground();}else{hiddenAt=Date.now();updateGiftCountdowns();}
+  // 只刷状态不调 fillCoach：切走再回来不该抹掉没保存的时段输入。
+  syncTrackPolling();syncWakeLock();renderCoachDuty();renderCoachStatus();
+});
+window.addEventListener('pageshow',()=>{if(currentScreen==='monitor'&&monitorWantsConnection&&!stream)connectRoomStream();tickExpiries();checkSession();syncWakeLock();});
+applyTheme();applyLayout();applyFontSize(false);fillSettings();fillCoach();savedRooms=readSavedRooms(true);showMyRooms();loadIcons();
+</script></body></html>

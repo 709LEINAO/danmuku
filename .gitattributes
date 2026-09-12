@@ -1,0 +1,4 @@
+# 部署脚本要在 Linux 上跑，任何平台检出都保持 LF；批处理保持 CRLF。
+* text=auto
+*.sh text eol=lf
+*.cmd text eol=crlf

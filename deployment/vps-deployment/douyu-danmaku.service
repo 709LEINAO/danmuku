@@ -1,0 +1,20 @@
+[Unit]
+Description=Douyu Danmaku Viewer
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+Type=simple
+User=douyu-danmaku
+Group=douyu-danmaku
+WorkingDirectory=/opt/douyu-danmaku
+ExecStart=/opt/douyu-danmaku/douyu-danmaku-linux-amd64 -addr 0.0.0.0:80
+Restart=on-failure
+RestartSec=3
+UMask=0077
+AmbientCapabilities=CAP_NET_BIND_SERVICE
+CapabilityBoundingSet=CAP_NET_BIND_SERVICE
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

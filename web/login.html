@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="zh-CN" data-theme="dark"><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><meta name="theme-color" content="#141619"><title>登录 · 斗鱼弹幕台</title>
+<link rel="icon" href="data:,">
+<script>try{const saved=JSON.parse(localStorage.getItem('douyu-danmaku.settings.v3')||localStorage.getItem('douyu-danmaku.settings.v2')||'{}');if(saved.theme==='light'){document.documentElement.dataset.theme='light';document.querySelector('meta[name="theme-color"]').content='#fafafb';}}catch(_){}</script>
+<style>
+:root{color-scheme:dark;--bg:#101114;--card:#1e2025;--text:#f0f0f2;--muted:#9498a3;--line:#ffffff12;--red:#ff7584;--input:#17191e;font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif;font-synthesis:none}
+:root[data-theme=light]{color-scheme:light;--bg:#eeeff2;--card:#fff;--text:#25262b;--muted:#70747f;--line:#20263020;--red:#b82940;--input:#fff}
+*{box-sizing:border-box}body{margin:0;min-height:100svh;padding:24px 20px;display:grid;place-items:center;background:var(--bg);color:var(--text);font-size:14px;line-height:1.6}main{width:min(100%,360px);padding:28px 24px;border:1px solid var(--line);border-radius:18px;background:var(--card)}.brand{color:var(--red);font-size:12px;font-weight:700;letter-spacing:.12em}h1{font-size:24px;line-height:1.4;margin:8px 0}p{margin:0 0 24px;color:var(--muted)}label{display:block;font-weight:600;margin-bottom:8px}input,button{font:inherit;width:100%;min-height:46px;border-radius:10px}input{padding:10px 12px;font-size:16px;color:var(--text);background:var(--input);border:1px solid var(--line)}button{margin-top:16px;padding:10px 14px;border:0;background:var(--red);color:var(--bg);font-weight:700;cursor:pointer;touch-action:manipulation}input:focus-visible,button:focus-visible{outline:2px solid var(--red);outline-offset:3px}.error{margin:12px 0 0;color:var(--red);font-size:13px}.hint{font-size:12px;margin:18px 0 0}@media(max-width:340px){body{padding:18px 14px}main{padding:24px 20px}}
+.field-title{display:block;font-weight:600;margin:20px 0 8px}.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px}.modes button{margin:0;padding:8px 10px;display:grid;gap:2px;align-content:center;text-align:left;background:var(--input);color:var(--text);border:1px solid var(--line);font-weight:600}.modes button small{font-size:11px;font-weight:500;color:var(--muted)}.modes button[aria-pressed=true]{color:var(--red);border-color:var(--red);box-shadow:inset 0 0 0 1px var(--red)}.modes button[aria-pressed=true] small{color:var(--red)}
+</style></head><body>
+<main aria-labelledby="login-title"><div class="brand">斗鱼弹幕台</div><h1 id="login-title">输入访问密码</h1><p>登录后查看弹幕、礼物与给分。</p>
+<form id="login-form" method="post" action="/login"><input type="hidden" name="next" value="{{.Next}}"><label for="password">访问密码</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required {{if .Error}}aria-describedby="login-error" aria-invalid="true"{{end}}>
+{{if .Error}}<p id="login-error" class="error" role="alert">{{.Error}}</p>{{end}}
+<span class="field-title" id="mode-label">显示方式</span>
+<div class="modes" role="group" aria-labelledby="mode-label">
+<button type="button" data-layout-choice="phone" aria-pressed="true">手机端<small>单屏切换</small></button>
+<button type="button" data-layout-choice="pad" aria-pressed="false">平板端<small>分栏 · 斗鱼原生弹幕</small></button>
+</div>
+<button id="login-button" type="submit">登录</button></form><p class="hint">显示方式随时可在设置里改。登录有效期为 24 小时，可在设置中退出。</p></main>
+<script>
+(function(){
+  const KEY='douyu-danmaku.settings.v3';
+  const read=()=>{try{return JSON.parse(localStorage.getItem(KEY)||'{}')||{};}catch(_){return {};}};
+  const buttons=[...document.querySelectorAll('[data-layout-choice]')];
+  // iPadOS 自报 macOS，只能靠触点数补判；其余按屏幕短边猜，猜错用户点一下就改。
+  function detect(){
+    const ua=navigator.userAgent||'';
+    if(/iPad/.test(ua))return 'pad';
+    if(navigator.platform==='MacIntel'&&(navigator.maxTouchPoints||0)>1)return 'pad';
+    if(/Android/.test(ua)&&!/Mobile/.test(ua))return 'pad';
+    return Math.min(screen.width||0,screen.height||0)>=600?'pad':'phone';
+  }
+  const saved=read();
+  let layout=saved.layout==='pad'||saved.layout==='phone'?saved.layout:detect();
+  const paint=()=>buttons.forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.layoutChoice===layout)));
+  // 只改 layout 一个键，其余原样读回再写，免得覆盖同一份 v3。
+  const store=()=>{try{localStorage.setItem(KEY,JSON.stringify({...read(),layout}));}catch(_){}};
+  buttons.forEach(b=>b.addEventListener('click',()=>{layout=b.dataset.layoutChoice;paint();store();}));
+  paint();store();
+  document.getElementById('login-form').addEventListener('submit',store);
+})();
+</script>
+</body></html>
