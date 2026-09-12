@@ -55,10 +55,11 @@ func (w *roomWorker) envelope(data any) roomEnvelope {
 type roomSubscription struct {
 	manager *roomManager
 	worker  *roomWorker
-	status  Status
-	history []Event
-	events  chan streamEvent
-	once    sync.Once
+	// 首帧与回放都由 hub 编好，这里只负责写出去。
+	statusFrame []byte
+	history     [][]byte
+	events      chan []byte
+	once        sync.Once
 }
 
 func (s *roomSubscription) Close() {
@@ -239,9 +240,11 @@ func (m *roomManager) Subscribe(ctx context.Context, input string) (*roomSubscri
 		if worker == nil {
 			workerCtx, workerCancel := context.WithCancel(m.ctx)
 			m.nextID++
+			// hub 要在构造时就拿到信封的两个值：帧在它那里编好，之后不再逐订阅者拼装。
+			generation := m.processID + "-" + strconv.FormatUint(m.nextID, 36)
 			worker = &roomWorker{
-				room: room, generation: m.processID + "-" + strconv.FormatUint(m.nextID, 36),
-				hub: newHub(), cancel: workerCancel, done: make(chan struct{}),
+				room: room, generation: generation,
+				hub: newHub(room.ID, generation), cancel: workerCancel, done: make(chan struct{}),
 			}
 			worker.hub.status.Room = room
 			worker.hub.status.Phase, worker.hub.status.Message = "connecting", "正在连接弹幕服务"
@@ -252,9 +255,9 @@ func (m *roomManager) Subscribe(ctx context.Context, input string) (*roomSubscri
 		m.stopIdleLocked(worker)
 		worker.viewers++
 		m.mu.Unlock()
-		status, history, events := worker.hub.Subscribe()
+		statusFrame, history, events := worker.hub.Subscribe()
 		acquired = true
-		return &roomSubscription{manager: m, worker: worker, status: status, history: history, events: events}, nil
+		return &roomSubscription{manager: m, worker: worker, statusFrame: statusFrame, history: history, events: events}, nil
 	}
 }
 

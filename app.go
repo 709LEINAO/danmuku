@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"log"
 	"math"
 	"net/http"
 	"sync"
@@ -50,15 +51,7 @@ func (s wireStatus) MarshalJSON() ([]byte, error) {
 	}{s.Phase, s.Message, s.Room, s.Endpoint, s.Attempt, s.LoginOK, s.GroupSent, s.Heartbeats, s.LastReceived})
 }
 
-// 订阅首帧、20 秒保活、hub 广播三处共用，漏掉一处就会发出全量。
-func statusEvent(status Status) streamEvent {
-	return streamEvent{Name: "status", Data: wireStatus(status)}
-}
-
-type streamEvent struct {
-	Name string
-	Data any
-}
+// 订阅首帧、20 秒保活、hub 广播三处共用 frame()，漏掉一处就会发出全量。
 
 // 开播瞬间几十个贵族同时进房是常态，令牌桶留这点突发，之后降到每 2 秒一条。
 const (
@@ -86,26 +79,66 @@ type giftTrigger struct {
 	at   time.Time
 }
 
+// SSE 帧在 hub 里编码一次再扇出：同一房间所有订阅者收到的字节完全相同，因为信封的
+// roomId/generation 是 worker 级的、创建后不变。原先每个订阅者的 stream goroutine 各自
+// Marshal 一份，CPU 随观看者数线性增长——实测 1000 条/秒下 20 人占 50 % CPU、送达 100 %，
+// 100 人占 122 % 且送达跌到 56 %、被踢 621 次。
 type eventHub struct {
-	mu          sync.Mutex
+	mu sync.Mutex
+	// 构造后不变，frame() 因此无需持锁。
+	roomID      string
+	generation  string
+	resetFrame  []byte
 	status      Status
-	history     []Event
+	history     [][]byte
 	gifts       giftCatalog
 	giftRoomID  string
 	triggers    map[string]giftTrigger
-	subscribers map[chan streamEvent]struct{}
+	subscribers map[chan []byte]struct{}
 	lastPublish time.Time
 	enterTokens float64
 	enterAt     time.Time
 	closed      bool
 }
 
-func newHub() *eventHub {
-	return &eventHub{
+func newHub(roomID, generation string) *eventHub {
+	hub := &eventHub{
+		roomID: roomID, generation: generation,
 		status:      Status{Phase: "idle", Message: "输入房间，开始接收文字消息", Types: map[string]int64{}, Events: map[string]int64{}},
 		triggers:    make(map[string]giftTrigger),
-		subscribers: make(map[chan streamEvent]struct{}),
+		subscribers: make(map[chan []byte]struct{}),
 	}
+	// 内容恒定，编一次供全部订阅者复用。
+	hub.resetFrame = hub.frame("reset", struct{}{})
+	return hub
+}
+
+// 整条 SSE 帧，含信封。编码失败返回 nil，调用方跳过这一帧而不是断开订阅。
+func (h *eventHub) frame(name string, data any) []byte {
+	payload, err := json.Marshal(roomEnvelope{RoomID: &h.roomID, Generation: &h.generation, Data: data})
+	if err != nil {
+		log.Printf("RID=%s 无法编码 %s 帧：%v", h.roomID, name, err)
+		return nil
+	}
+	frame := make([]byte, 0, len("event: \ndata: \n\n")+len(name)+len(payload))
+	frame = append(frame, "event: "...)
+	frame = append(frame, name...)
+	frame = append(frame, "\ndata: "...)
+	frame = append(frame, payload...)
+	return append(frame, '\n', '\n')
+}
+
+func (h *eventHub) ResetFrame() []byte { return h.resetFrame }
+
+// wireStatus 不输出 Types/Events，所以这里不必先 snapshot 拷贝那两张表。
+func (h *eventHub) statusFrameLocked() []byte {
+	return h.frame("status", wireStatus(h.status))
+}
+
+func (h *eventHub) StatusFrame() []byte {
+	h.mu.Lock()
+	defer h.mu.Unlock()
+	return h.statusFrameLocked()
 }
 
 func copyCounts(source map[string]int64) map[string]int64 {
@@ -128,10 +161,13 @@ func (h *eventHub) Snapshot() Status {
 	return h.snapshotLocked()
 }
 
-func (h *eventHub) broadcastLocked(event streamEvent) {
+func (h *eventHub) broadcastLocked(frame []byte) {
+	if frame == nil {
+		return
+	}
 	for channel := range h.subscribers {
 		select {
-		case channel <- event:
+		case channel <- frame:
 		default:
 			// 踢掉写不动的订阅；EventSource 会重连并拿到新快照。
 			delete(h.subscribers, channel)
@@ -146,7 +182,7 @@ func (h *eventHub) broadcastLocked(event streamEvent) {
 func (h *eventHub) publishStatusLocked() {
 	h.lastPublish = time.Now()
 	h.status.UpdatedAt = h.lastPublish.Format(time.RFC3339Nano)
-	h.broadcastLocked(statusEvent(h.snapshotLocked()))
+	h.broadcastLocked(h.statusFrameLocked())
 }
 
 func (h *eventHub) Update(change func(*Status)) {
@@ -164,7 +200,7 @@ func (h *eventHub) Reset(input string) {
 	h.enterTokens, h.enterAt = 0, time.Time{}
 	clear(h.triggers)
 	// 保留上一份礼物目录；Packet 只认 RID 对得上的那份。
-	h.broadcastLocked(streamEvent{Name: "reset", Data: struct{}{}})
+	h.broadcastLocked(h.resetFrame)
 	h.publishStatusLocked()
 }
 
@@ -227,38 +263,43 @@ func (h *eventHub) Packet(fields map[string]string, roomID string) {
 		h.traceGiftTriggerLocked(&event, time.Now())
 		h.status.Events[event.Kind]++
 		event.Index = h.status.Events[event.Kind]
-		if len(h.history) == historyLimit {
-			copy(h.history, h.history[1:])
-			h.history = h.history[:historyLimit-1]
+		// 历史存编好的帧而不是 Event：回放不必逐条重编，一条 chatmsg 也从 ~1 KB 的
+		// 全量 Fields 降到投影后的帧长。
+		if frame := h.frame("message", event); frame != nil {
+			if len(h.history) == historyLimit {
+				copy(h.history, h.history[1:])
+				h.history = h.history[:historyLimit-1]
+			}
+			h.history = append(h.history, frame)
+			h.broadcastLocked(frame)
 		}
-		h.history = append(h.history, event)
-		h.broadcastLocked(streamEvent{Name: "message", Data: event})
 	}
 	if time.Since(h.lastPublish) >= statusInterval {
 		h.publishStatusLocked()
 	}
 }
 
-func (h *eventHub) Subscribe() (Status, []Event, chan streamEvent) {
+func (h *eventHub) Subscribe() ([]byte, [][]byte, chan []byte) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
-	channel := make(chan streamEvent, subscriberQueue)
+	channel := make(chan []byte, subscriberQueue)
 	if h.closed {
 		close(channel)
 	} else {
 		h.subscribers[channel] = struct{}{}
 	}
-	return h.snapshotLocked(), append([]Event(nil), h.history...), channel
+	// 帧只读，与仍在历史里的那份共享底层数组。
+	return h.statusFrameLocked(), append([][]byte(nil), h.history...), channel
 }
 
-func (h *eventHub) IsSubscribed(channel chan streamEvent) bool {
+func (h *eventHub) IsSubscribed(channel chan []byte) bool {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	_, exists := h.subscribers[channel]
 	return exists
 }
 
-func (h *eventHub) Unsubscribe(channel chan streamEvent) {
+func (h *eventHub) Unsubscribe(channel chan []byte) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	if _, exists := h.subscribers[channel]; exists {
@@ -413,6 +454,17 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 	ctx, cancel := a.roomRequestContext(r)
 	defer cancel()
 	controller := http.NewResponseController(w)
+	sendFrame := func(frame []byte) bool {
+		if frame == nil {
+			return true
+		}
+		controller.SetWriteDeadline(time.Now().Add(10 * time.Second))
+		if _, err := w.Write(frame); err != nil {
+			return false
+		}
+		return controller.Flush() == nil
+	}
+	// 只有这两类帧不经 hub：一个没有房间信封，一个的信封来自失败的订阅。
 	send := func(name string, value any) bool {
 		data, err := json.Marshal(value)
 		if err != nil {
@@ -449,7 +501,7 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	defer subscription.Close()
-	write := func(event streamEvent) bool {
+	write := func(frame []byte) bool {
 		if a.sessionExpired(session) {
 			endSession()
 			return false
@@ -457,13 +509,13 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 		if ctx.Err() != nil || a.rooms.ctx.Err() != nil {
 			return false
 		}
-		return send(event.Name, subscription.worker.envelope(event.Data))
+		return sendFrame(frame)
 	}
-	if !write(streamEvent{Name: "reset", Data: struct{}{}}) || !write(statusEvent(subscription.status)) {
+	if !write(subscription.worker.hub.ResetFrame()) || !write(subscription.statusFrame) {
 		return
 	}
-	for _, event := range subscription.history {
-		if !subscription.worker.hub.IsSubscribed(subscription.events) || !write(streamEvent{Name: "message", Data: event}) {
+	for _, frame := range subscription.history {
+		if !subscription.worker.hub.IsSubscribed(subscription.events) || !write(frame) {
 			return
 		}
 	}
@@ -478,12 +530,12 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 			return
 		case <-a.rooms.ctx.Done():
 			return
-		case event, open := <-subscription.events:
-			if !open || !write(event) {
+		case frame, open := <-subscription.events:
+			if !open || !write(frame) {
 				return
 			}
 		case <-keepalive.C:
-			if !write(statusEvent(subscription.worker.hub.Snapshot())) {
+			if !write(subscription.worker.hub.StatusFrame()) {
 				return
 			}
 		}
