@@ -25,6 +25,7 @@ type Event struct {
 	TriggeredBy   string            `json:"triggeredBy,omitempty"`
 	UserMeta      *UserMetadata     `json:"userMeta,omitempty"`
 	GiftReference *GiftReference    `json:"giftReference,omitempty"`
+	DiamondFan    *DiamondFan       `json:"diamondFan,omitempty"`
 	Fields        map[string]string `json:"fields,omitempty"`
 	VoiceFields   map[string]string `json:"voiceFields,omitempty"`
 }
@@ -142,6 +143,45 @@ func guestEnter(meta *UserMetadata) bool {
 	return meta != nil && meta.Noble != nil && noticeNoble(meta.Noble.Level)
 }
 
+// 钻石粉丝开通/续费。Months 为 0 表示广播没带月数，斗鱼自己也只显示一个「-」。
+type DiamondFan struct {
+	Months    int64 `json:"months,omitempty"`
+	BonusDays int64 `json:"bonusDays,omitempty"`
+	Renew     bool  `json:"renew,omitempty"`
+	ViaGift   bool  `json:"viaGift,omitempty"`
+}
+
+// 斗鱼把这件事拆成四种广播：直接买(dfobc)、直接续(dfrbc)、送礼触发开通(odfpbc)、
+// 送礼触发续费(rdfpbc)。字段一模一样，只差动作词，所以合成一张表。
+var diamondFanKinds = map[string]DiamondFan{
+	"dfobc":  {},
+	"dfrbc":  {Renew: true},
+	"odfpbc": {ViaGift: true},
+	"rdfpbc": {Renew: true, ViaGift: true},
+}
+
+// 昵称在 nick 而不是别处的 nn，别照着 chatmsg 抄。月数缺失不丢事件：
+// 「谁开通了钻粉」本身就是要看的那句，月数只是附注。
+func diamondFan(fields map[string]string, roomID string) *DiamondFan {
+	fan, known := diamondFanKinds[fields["type"]]
+	if !known {
+		return nil
+	}
+	// rrid 是钻粉牌归属的主播房间，跟这条广播落在哪个房间(rid)是两回事：在 A 房间
+	// 买 B 主播的钻粉，A 也收得到。只留开给本房间的，别家那张牌这边不关心。
+	// rrid 缺席按本房间算，免得字段偶尔不下发就整条丢掉。
+	if anchor := fields["rrid"]; anchor != "" && anchor != roomID {
+		return nil
+	}
+	if months, err := strconv.ParseInt(fields["mn"], 10, 64); err == nil && months > 0 {
+		fan.Months = months
+	}
+	if days, err := strconv.ParseInt(fields["cdays"], 10, 64); err == nil && days > 0 {
+		fan.BonusDays = days
+	}
+	return &fan
+}
+
 // 幻兽蛋一类礼物随后会再下发一条孵化产物，gfid 恒为 0、ct=99，钱已全额记在触发它的
 // 那条上。只回溯出处、不计价，免得同一笔钱记两遍。
 const (
@@ -203,6 +243,13 @@ func normalizeEvent(fields map[string]string, roomID string, catalog giftCatalog
 			return Event{}, false
 		}
 		event.Kind = "enter"
+	case "dfobc", "dfrbc", "odfpbc", "rdfpbc":
+		fan := diamondFan(fields, roomID)
+		if fan == nil {
+			return Event{}, false
+		}
+		event.Kind, event.DiamondFan = "diamond", fan
+		event.User = first(fields["nick"], fields["nn"], "匿名用户")
 	case "comm_chatmsg":
 		if fields["btype"] != "voiceDanmu" {
 			return Event{}, false

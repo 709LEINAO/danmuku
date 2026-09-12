@@ -194,6 +194,26 @@ func (catalog giftCatalog) supplement(additions giftCatalog) giftCatalog {
 // 单价字段 pc 与房间目录的 price 同单位同值，全库 ry=0（没有鱼丸档）。
 const propConfigEndpoint = "https://webconf.douyucdn.cn/resource/common/prop_gift_list/prop_gift_config.json"
 
+// 这张表混着两类东西：背包免费道具（荧光棒、赞……标了单价但送出不扣钱）和
+// 真金白银买来、只是走背包发放的礼物（钻粉卡 ¥218、钻粉飞机 ¥100、办卡 ¥6）。
+// 38 个字段里没有一个能区分：type 全是 2，ry 与 active_type 全 0，exp 与 devote
+// 恒等于 pc/10，免费的「赞」和付费的「钻粉卡」逐字段同形。价格也划不开线——
+// 免费的「稳」有 ¥50 的版本，付费的「办卡」只要 ¥6。
+//
+// 所以只按名字放行已核实付费的那几种，其余一律沿用 Prop（不计营收）。方向是
+// 保守的：漏记一种付费礼物只是少算，错放一种免费道具会把营收合计和置顶门槛
+// 一起撑起来。发现漏了哪种，往这张表加一行就行。
+var paidPropNames = map[string]struct{}{
+	"钻粉卡":   {},
+	"钻粉飞机":  {},
+	"钻粉摩天轮": {},
+	"办卡":    {},
+}
+
+// 同名以后要是出个白送的赠品版，用这条下限挡住。已核实的付费档最低是 ¥6 的
+// 办卡，免费道具都在 ¥1 以内。
+const minPaidPropPrice = 100
+
 // pc 与 devote 不保证是整数（实测有 665.9）。用 json.Number 收下再自己取整，
 // 免得一行小数废掉整张表。
 type propConfigRow struct {
@@ -261,6 +281,9 @@ func parsePropCatalog(body io.Reader) (giftCatalog, error) {
 		}
 		if price, ok := propNumber(entry.Price); ok && price >= 0 {
 			gift.UnitPrice = &price
+			if _, paid := paidPropNames[entry.Name]; paid && price >= minPaidPropPrice {
+				gift.Prop = false
+			}
 		}
 		catalog[id] = gift
 	}

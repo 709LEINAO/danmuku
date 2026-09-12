@@ -59,6 +59,13 @@ const (
 	enterInterval = 2 * time.Second
 )
 
+// 钻粉开通按活动扎堆来：主播喊一次卡能连着砸进几十条。桶留 3 个，正好一次
+// 填满置顶区那三行，之后每 5 秒放一条。
+const (
+	diamondBurst    = 3.0
+	diamondInterval = 5 * time.Second
+)
+
 // 只节流计数器刷新；相位变化走 Update() 无条件立即发，不会晚一拍。
 // 代价是「连接详情」里的心跳与最近接收最多旧 5 秒。
 const statusInterval = 5 * time.Second
@@ -79,6 +86,26 @@ type giftTrigger struct {
 	at   time.Time
 }
 
+// 首次调用给满桶：刚进房时最近几位贵宾、最近几张钻粉卡照样能看到。
+type tokenBucket struct {
+	tokens float64
+	at     time.Time
+}
+
+func (b *tokenBucket) allow(now time.Time, burst float64, interval time.Duration) bool {
+	if b.at.IsZero() {
+		b.tokens = burst
+	} else if elapsed := now.Sub(b.at); elapsed > 0 {
+		b.tokens = math.Min(burst, b.tokens+elapsed.Seconds()/interval.Seconds())
+	}
+	b.at = now
+	if b.tokens < 1 {
+		return false
+	}
+	b.tokens--
+	return true
+}
+
 // SSE 帧在 hub 里编码一次再扇出：同一房间所有订阅者收到的字节完全相同，因为信封的
 // roomId/generation 是 worker 级的、创建后不变。原先每个订阅者的 stream goroutine 各自
 // Marshal 一份，CPU 随观看者数线性增长——实测 1000 条/秒下 20 人占 50 % CPU、送达 100 %，
@@ -96,8 +123,8 @@ type eventHub struct {
 	triggers    map[string]giftTrigger
 	subscribers map[chan []byte]struct{}
 	lastPublish time.Time
-	enterTokens float64
-	enterAt     time.Time
+	enter       tokenBucket
+	diamond     tokenBucket
 	closed      bool
 }
 
@@ -197,25 +224,21 @@ func (h *eventHub) Reset(input string) {
 	defer h.mu.Unlock()
 	h.status = Status{Phase: "resolving", Message: "正在查询真实房间号", Room: Room{Input: input}, Types: map[string]int64{}, Events: map[string]int64{}}
 	h.history = nil
-	h.enterTokens, h.enterAt = 0, time.Time{}
+	h.enter, h.diamond = tokenBucket{}, tokenBucket{}
 	clear(h.triggers)
 	// 保留上一份礼物目录；Packet 只认 RID 对得上的那份。
 	h.broadcastLocked(h.resetFrame)
 	h.publishStatusLocked()
 }
 
-// 首次调用给满桶，刚进房时最近几位贵宾照样能看到。
-func (h *eventHub) allowEnterLocked(now time.Time) bool {
-	if h.enterAt.IsZero() {
-		h.enterTokens = enterBurst
-	} else if elapsed := now.Sub(h.enterAt); elapsed > 0 {
-		h.enterTokens = math.Min(enterBurst, h.enterTokens+elapsed.Seconds()/enterInterval.Seconds())
+// 只有会扎堆刷屏的两类过桶，其余一律放行。
+func (h *eventHub) allowEventLocked(kind string, now time.Time) bool {
+	switch kind {
+	case "enter":
+		return h.enter.allow(now, enterBurst, enterInterval)
+	case "diamond":
+		return h.diamond.allow(now, diamondBurst, diamondInterval)
 	}
-	h.enterAt = now
-	if h.enterTokens < 1 {
-		return false
-	}
-	h.enterTokens--
 	return true
 }
 
@@ -259,7 +282,7 @@ func (h *eventHub) Packet(fields map[string]string, roomID string) {
 	if h.giftRoomID != roomID {
 		catalog = nil
 	}
-	if event, ok := normalizeEvent(fields, roomID, catalog); ok && (event.Kind != "enter" || h.allowEnterLocked(time.Now())) {
+	if event, ok := normalizeEvent(fields, roomID, catalog); ok && h.allowEventLocked(event.Kind, time.Now()) {
 		h.traceGiftTriggerLocked(&event, time.Now())
 		h.status.Events[event.Kind]++
 		event.Index = h.status.Events[event.Kind]

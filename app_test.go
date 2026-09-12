@@ -3,7 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 	"testing"
+	"time"
 )
 
 func chatFields(room, text string) map[string]string {
@@ -111,6 +113,139 @@ func TestSnapshotKeepsDiagnostics(t *testing.T) {
 	status := hub.Snapshot()
 	if status.Packets != 1 || status.Types["chatmsg"] != 1 || status.Events["chat"] != 1 {
 		t.Fatalf("诊断计数 = %+v", status)
+	}
+}
+
+func diamondFields(room string, extra map[string]string) map[string]string {
+	fields := map[string]string{"type": "dfobc", "rid": room, "uid": "42", "nick": "阿宝", "mn": "1"}
+	for key, value := range extra {
+		fields[key] = value
+	}
+	return fields
+}
+
+// 四种广播只差动作词，字段一致；昵称在 nick 而不是 nn。
+func TestDiamondFanKinds(t *testing.T) {
+	for _, item := range []struct {
+		packet  string
+		renew   bool
+		viaGift bool
+	}{
+		{"dfobc", false, false},
+		{"dfrbc", true, false},
+		{"odfpbc", false, true},
+		{"rdfpbc", true, true},
+	} {
+		event, ok := normalizeEvent(diamondFields("1", map[string]string{"type": item.packet, "mn": "3"}), "1", nil)
+		if !ok {
+			t.Fatalf("%s 被丢弃", item.packet)
+		}
+		if event.Kind != "diamond" || event.User != "阿宝" {
+			t.Errorf("%s → kind=%q user=%q", item.packet, event.Kind, event.User)
+		}
+		fan := event.DiamondFan
+		if fan == nil {
+			t.Fatalf("%s 没带 diamondFan", item.packet)
+		}
+		if fan.Months != 3 || fan.Renew != item.renew || fan.ViaGift != item.viaGift {
+			t.Errorf("%s → %+v", item.packet, *fan)
+		}
+	}
+}
+
+// rrid 是钻粉牌归属的主播房间，跟广播落在哪个房间是两回事：在本房间买别家主播
+// 的钻粉，这边也收得到，但不该显示。rrid 缺席按本房间算。
+func TestDiamondFanKeepsOnlyThisRoom(t *testing.T) {
+	if _, ok := normalizeEvent(diamondFields("1", map[string]string{"rrid": "999", "rnick": "别家主播"}), "1", nil); ok {
+		t.Error("开给别家主播的钻粉没有被丢弃")
+	}
+	for _, rrid := range []string{"", "1"} {
+		event, ok := normalizeEvent(diamondFields("1", map[string]string{"rrid": rrid, "cdays": "7"}), "1", nil)
+		if !ok {
+			t.Fatalf("rrid=%q 的本房间开通被丢弃", rrid)
+		}
+		if event.DiamondFan.BonusDays != 7 {
+			t.Errorf("rrid=%q → %+v", rrid, *event.DiamondFan)
+		}
+	}
+}
+
+// 月数缺失照样播报：「谁开通了钻粉」本身就是要看的那句。
+func TestDiamondFanKeepsEventWithoutMonths(t *testing.T) {
+	event, ok := normalizeEvent(diamondFields("1", map[string]string{"mn": ""}), "1", nil)
+	if !ok || event.DiamondFan == nil || event.DiamondFan.Months != 0 {
+		t.Fatalf("缺月数时 ok=%v event=%+v", ok, event.DiamondFan)
+	}
+}
+
+// 桶满时正好放行三条，与页面同时并存三行对得上；之后按间隔滴。
+func TestDiamondBurstMatchesPinRows(t *testing.T) {
+	hub := newHub("1", "g")
+	now := time.Now()
+	passed := 0
+	for range 10 {
+		if hub.allowEventLocked("diamond", now) {
+			passed++
+		}
+	}
+	if passed != int(diamondBurst) {
+		t.Fatalf("满桶放行 %d 条，期望 %v", passed, diamondBurst)
+	}
+	if hub.allowEventLocked("diamond", now.Add(diamondInterval)) != true {
+		t.Fatal("过了一个间隔仍不放行")
+	}
+	// 两只桶互不影响。
+	if !hub.allowEventLocked("enter", now) {
+		t.Fatal("钻粉刷爆桶后连带挡住了进场")
+	}
+	// 其余类型不过桶。
+	for range 100 {
+		if !hub.allowEventLocked("chat", now) {
+			t.Fatal("聊天被限流了")
+		}
+	}
+}
+
+func TestDiamondPacketReachesSubscriber(t *testing.T) {
+	hub := newHub("1", "g")
+	_, _, events := hub.Subscribe()
+	hub.Packet(diamondFields("1", map[string]string{"mn": "12"}), "1")
+	frame := <-events
+	body := frameBody(t, frame, "message")
+	for _, want := range []string{`"kind":"diamond"`, `"months":12`, `"user":"阿宝"`} {
+		if !bytes.Contains(body, []byte(want)) {
+			t.Errorf("帧缺少 %s：%s", want, body)
+		}
+	}
+}
+
+// 道具表把免费道具和真付费礼物混在一起，只有名单里那几种撤掉 Prop。
+func TestPaidPropsAreNotMarkedProp(t *testing.T) {
+	payload := `DYConfigCallback({"error":0,"data":{
+		"192":{"name":"赞","pc":10,"devote":1},
+		"1757":{"name":"办卡","pc":600,"devote":60},
+		"21668":{"name":"钻粉卡","pc":21800,"devote":2180},
+		"24108":{"name":"钻粉飞机","pc":10000,"devote":1000},
+		"99001":{"name":"钻粉卡","pc":50,"devote":5}
+	}})`
+	catalog, err := parsePropCatalog(strings.NewReader(payload))
+	if err != nil {
+		t.Fatalf("解析道具表失败：%v", err)
+	}
+	for id, wantProp := range map[string]bool{
+		"192":   true,  // 免费道具，维持不计营收
+		"1757":  false, // ¥6 的办卡，真付费
+		"21668": false, // ¥218 的钻粉卡，正是这次要救回来的
+		"24108": false,
+		"99001": true, // 同名但低于 ¥1 下限，按赠品挡回去
+	} {
+		if got := catalog[id].Prop; got != wantProp {
+			t.Errorf("%s（%s）Prop=%v，期望 %v", id, catalog[id].Name, got, wantProp)
+		}
+	}
+	// 撤掉 Prop 之后才谈得上计价。
+	if reference := catalog.reference("21668", "1"); reference == nil || reference.Prop || reference.NominalAmount != "218.00" {
+		t.Fatalf("钻粉卡参考价 = %+v", reference)
 	}
 }
 
