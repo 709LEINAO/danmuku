@@ -1,16 +1,23 @@
 # 构建产物：每次重建都变，且内嵌初始口令。走 Release 分发，不入库。
 douyu-danmaku.exe
 douyu-danmaku-linux-amd64
+# go build 不带 -o 时按 module 名产出，同样内嵌口令
+/douyu-danmaku
 deployment/deploy-current-http/build-result.json
 
 # 压测工具的产物与输出
 danmaku-loadtest.exe
 danmaku-loadtest-linux-amd64
+# 在 loadtest/ 里直接 go build 时按目录名产出
+/loadtest/loadtest
+/loadtest/loadtest.exe
 loadtest-result*.json
 loadtest-server*.log
 
 # 程序运行时写在可执行文件旁
 douyu-danmaku.settings.json
+# 设置原子写的中间文件，进程异常退出时会残留
+.douyu-danmaku.settings-*.tmp
 
 # 部署工具的运行产物：含主机地址、主机公钥与验收证据
 deployment/vps-deployment/known_hosts
@@ -19,3 +26,6 @@ deployment/vps-deployment/remote-inspection.json
 deployment/deploy-current-http/remote-before.json
 deployment/deploy-current-http/deployment-result.json
 __pycache__/
+# 装 deployment/requirements.txt 的虚拟环境：含本机绝对路径
+.venv/
+venv/
