@@ -81,6 +81,11 @@ const (
 	subscriberQueue = 512
 )
 
+// 一次写出攒多少字节。成本大头是 write+flush 这对系统调用，不是序列化：一条
+// chatmsg 三四百字节，逐帧写等于每条消息给每个观看者各来一次。攒到这个上限就发，
+// 再大只会让慢连接的首字节更晚。
+const maxStreamBatch = 64 << 10
+
 type giftTrigger struct {
 	gift string
 	at   time.Time
@@ -123,9 +128,12 @@ type eventHub struct {
 	triggers    map[string]giftTrigger
 	subscribers map[chan []byte]struct{}
 	lastPublish time.Time
-	enter       tokenBucket
-	diamond     tokenBucket
-	closed      bool
+	// 收包时刻只记不格式化：每包 Format 一次 RFC3339Nano 是笔白账，这个值要么
+	// 5 秒一次随状态帧出门，要么走 /api/status，其余时候没人看。
+	lastReceived time.Time
+	enter        tokenBucket
+	diamond      tokenBucket
+	closed       bool
 }
 
 func newHub(roomID, generation string) *eventHub {
@@ -157,8 +165,16 @@ func (h *eventHub) frame(name string, data any) []byte {
 
 func (h *eventHub) ResetFrame() []byte { return h.resetFrame }
 
+// 读 Status 之前把推迟的时间戳补上，这是唯一会看它的地方。
+func (h *eventHub) syncReceivedLocked() {
+	if !h.lastReceived.IsZero() {
+		h.status.LastReceived = h.lastReceived.Format(time.RFC3339Nano)
+	}
+}
+
 // wireStatus 不输出 Types/Events，所以这里不必先 snapshot 拷贝那两张表。
 func (h *eventHub) statusFrameLocked() []byte {
+	h.syncReceivedLocked()
 	return h.frame("status", wireStatus(h.status))
 }
 
@@ -177,6 +193,7 @@ func copyCounts(source map[string]int64) map[string]int64 {
 }
 
 func (h *eventHub) snapshotLocked() Status {
+	h.syncReceivedLocked()
 	status := h.status
 	status.Types, status.Events = copyCounts(status.Types), copyCounts(status.Events)
 	return status
@@ -224,6 +241,7 @@ func (h *eventHub) Reset(input string) {
 	defer h.mu.Unlock()
 	h.status = Status{Phase: "resolving", Message: "正在查询真实房间号", Room: Room{Input: input}, Types: map[string]int64{}, Events: map[string]int64{}}
 	h.history = nil
+	h.lastReceived = time.Time{}
 	h.enter, h.diamond = tokenBucket{}, tokenBucket{}
 	clear(h.triggers)
 	// 保留上一份礼物目录；Packet 只认 RID 对得上的那份。
@@ -275,20 +293,21 @@ func (h *eventHub) mergeGifts(roomID string, catalog giftCatalog) {
 func (h *eventHub) Packet(fields map[string]string, roomID string) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
+	now := time.Now()
 	h.status.Packets++
 	h.status.Types[fields["type"]]++
-	h.status.LastReceived = time.Now().Format(time.RFC3339Nano)
+	h.lastReceived = now
 	catalog := h.gifts
 	if h.giftRoomID != roomID {
 		catalog = nil
 	}
-	if event, ok := normalizeEvent(fields, roomID, catalog); ok && h.allowEventLocked(event.Kind, time.Now()) {
-		h.traceGiftTriggerLocked(&event, time.Now())
+	if event, ok := normalizeEvent(fields, roomID, catalog); ok && h.allowEventLocked(event.Kind, now) {
+		h.traceGiftTriggerLocked(&event, now)
 		h.status.Events[event.Kind]++
 		event.Index = h.status.Events[event.Kind]
 		// 历史存编好的帧而不是 Event：回放不必逐条重编，一条 chatmsg 也从 ~1 KB 的
 		// 全量 Fields 降到投影后的帧长。
-		if frame := h.frame("message", event); frame != nil {
+		if frame := h.frame("message", wireEvent(event)); frame != nil {
 			if len(h.history) == historyLimit {
 				copy(h.history, h.history[1:])
 				h.history = h.history[:historyLimit-1]
@@ -297,7 +316,7 @@ func (h *eventHub) Packet(fields map[string]string, roomID string) {
 			h.broadcastLocked(frame)
 		}
 	}
-	if time.Since(h.lastPublish) >= statusInterval {
+	if now.Sub(h.lastPublish) >= statusInterval {
 		h.publishStatusLocked()
 	}
 }
@@ -432,29 +451,30 @@ func (a *application) Handler() http.Handler {
 	return a.auth.protect(mux)
 }
 
-func (a *application) sessionExpired(session *authSession) bool {
+// ctx.Err() 要锁 cancelCtx 的互斥量，而 a.rooms.ctx 是全进程共享的那一个；帧路径上
+// 每次都查会把所有 stream goroutine 挤到同一把锁上。Done() 首次之后是原子读。
+func cancelled(ctx context.Context) bool {
 	select {
-	case <-session.done:
+	case <-ctx.Done():
 		return true
 	default:
-		return !a.auth.now().Before(session.expires)
+		return false
 	}
 }
 
-// 会话到期时解析也要停。
+func (a *application) sessionExpired(session *authSession) bool {
+	if cancelled(session.ctx) {
+		return true
+	}
+	return !a.auth.now().Before(session.expires)
+}
+
+// 会话到期时解析也要停。AfterFunc 不起 goroutine，会话撤销直接连到这次请求的取消上。
 func (a *application) roomRequestContext(r *http.Request) (context.Context, func()) {
 	session := r.Context().Value(authSessionKey{}).(*authSession)
 	ctx, cancel := context.WithTimeout(r.Context(), session.expires.Sub(a.auth.now()))
-	watchDone := make(chan struct{})
-	go func() {
-		defer close(watchDone)
-		select {
-		case <-session.done:
-			cancel()
-		case <-ctx.Done():
-		}
-	}()
-	return ctx, func() { cancel(); <-watchDone }
+	stop := context.AfterFunc(session.ctx, cancel)
+	return ctx, func() { stop(); cancel() }
 }
 
 func (a *application) stream(w http.ResponseWriter, r *http.Request) {
@@ -529,7 +549,7 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 			endSession()
 			return false
 		}
-		if ctx.Err() != nil || a.rooms.ctx.Err() != nil {
+		if cancelled(ctx) || cancelled(a.rooms.ctx) {
 			return false
 		}
 		return sendFrame(frame)
@@ -537,8 +557,23 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 	if !write(subscription.worker.hub.ResetFrame()) || !write(subscription.statusFrame) {
 		return
 	}
-	for _, frame := range subscription.history {
-		if !subscription.worker.hub.IsSubscribed(subscription.events) || !write(frame) {
+	// 回放也成批写：300 条逐条 write+flush 是重连风暴里最贵的一段，而慢设备正是在
+	// 这段里被新进的消息挤爆队列、掉线、再回放一次的。
+	//
+	// 按需长：安静房间里每条消息都走 coalesce 的零拷贝分支，缓冲一直是 nil；只有真
+	// 积压过的连接才会撑到上限。预先给每条连接留 64 KiB 的话，100 个观看者光这里就是
+	// 6 MiB，而绝大多数时候一个字节都用不上。
+	var batch []byte
+	for index := 0; index < len(subscription.history); {
+		if !subscription.worker.hub.IsSubscribed(subscription.events) {
+			return
+		}
+		batch = batch[:0]
+		for index < len(subscription.history) && len(batch) < maxStreamBatch {
+			batch = append(batch, subscription.history[index]...)
+			index++
+		}
+		if !write(batch) {
 			return
 		}
 	}
@@ -554,7 +589,13 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 		case <-a.rooms.ctx.Done():
 			return
 		case frame, open := <-subscription.events:
-			if !open || !write(frame) {
+			if !open {
+				return
+			}
+			var payload []byte
+			var ended bool
+			payload, batch, ended = coalesce(frame, subscription.events, batch)
+			if !write(payload) || ended {
 				return
 			}
 		case <-keepalive.C:
@@ -563,4 +604,28 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	}
+}
+
+// 把订阅通道里已经排着的帧一并取走。只取已经到手的，不等待，所以一毫秒延迟都不加：
+// 低速时一条也取不到，返回的还是 hub 那份共享字节、零拷贝，与逐帧写完全一样；高速时
+// 取到的正好是上一次 write+flush 期间堆起来的量，于是系统调用从每帧一次降到每批一次。
+// 返回 reuse 供下一轮复用容量；ended 表示订阅在排空途中被关掉了。
+func coalesce(first []byte, events <-chan []byte, buffer []byte) (payload, reuse []byte, ended bool) {
+	payload, buffer = first, buffer[:0]
+	for len(payload) < maxStreamBatch {
+		select {
+		case next, open := <-events:
+			if !open {
+				return payload, buffer, true
+			}
+			if len(buffer) == 0 {
+				buffer = append(buffer, first...)
+			}
+			buffer = append(buffer, next...)
+			payload = buffer
+		default:
+			return payload, buffer, false
+		}
+	}
+	return payload, buffer, false
 }

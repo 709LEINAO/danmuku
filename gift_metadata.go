@@ -301,18 +301,12 @@ const (
 	propCatalogRetry = time.Minute
 )
 
-type propCatalogCall struct {
-	done    chan struct{}
-	catalog giftCatalog
-	err     error
-}
-
 type propCatalogStore struct {
 	mu      sync.Mutex
 	cached  giftCatalog
 	fetched time.Time
 	retryAt time.Time
-	call    *propCatalogCall
+	single  flight[giftCatalog]
 	ttl     time.Duration
 	retry   time.Duration
 	now     func() time.Time
@@ -331,38 +325,29 @@ func (s *propCatalogStore) catalog(ctx context.Context, client *http.Client, lea
 		s.mu.Unlock()
 		return cached, nil
 	}
-	if call := s.call; call != nil {
-		s.mu.Unlock()
-		select {
-		case <-call.done:
-			return call.catalog, call.err
-		case <-ctx.Done():
-			return nil, ctx.Err()
+	s.mu.Unlock()
+	return s.single.do(ctx, func() (giftCatalog, error) {
+		fetchCtx, release := ctx, func() {}
+		if lead != nil {
+			fetchCtx, release = lead(ctx)
 		}
-	}
-	call := &propCatalogCall{done: make(chan struct{})}
-	s.call = call
-	s.mu.Unlock()
+		catalog, err := fetchPropCatalog(fetchCtx, client)
+		release()
 
-	fetchCtx, release := ctx, func() {}
-	if lead != nil {
-		fetchCtx, release = lead(ctx)
-	}
-	call.catalog, call.err = fetchPropCatalog(fetchCtx, client)
-	release()
-
-	// 先落缓存再放行跟随者。失败时有旧表就沿用旧表，稍后再试；没有旧表才把错误交给调用方重试。
-	s.mu.Lock()
-	s.call = nil
-	if call.err == nil {
-		s.cached, s.fetched = call.catalog, s.now()
-	} else if s.cached != nil {
-		s.retryAt = s.now().Add(s.retry)
-		call.catalog, call.err = s.cached, nil
-	}
-	s.mu.Unlock()
-	close(call.done)
-	return call.catalog, call.err
+		// 在这里落缓存，跟随者是在这之后才被放行的。失败时有旧表就沿用旧表、稍后再试，
+		// 改写的是所有人（含跟随者）拿到的那一份；没有旧表才把错误交给调用方重试。
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if err == nil {
+			s.cached, s.fetched = catalog, s.now()
+			return catalog, nil
+		}
+		if s.cached != nil {
+			s.retryAt = s.now().Add(s.retry)
+			return s.cached, nil
+		}
+		return catalog, err
+	})
 }
 
 func fetchPropCatalog(ctx context.Context, client *http.Client) (giftCatalog, error) {

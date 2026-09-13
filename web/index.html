@@ -322,6 +322,12 @@ function nominalOf(r){if(r?.currency!=='YUCHI')return null;const raw=r.nominalAm
 function amountOf(e){if(e.kind!=='gift'||propOf(e))return null;return nominalOf(e.giftReference);}
 function compareNewest(a,b){return eventData(b).at-eventData(a).at||eventData(b).index-eventData(a).index||eventKey(b).localeCompare(eventKey(a));}
 function compareGifts(a,b){const av=amountOf(a),bv=amountOf(b);return av===null?(bv===null?compareNewest(a,b):1):bv===null?-1:bv-av||compareNewest(a,b);}
+// 淘汰一条只需要一个极值，别为此把整张表排一遍：记录满 500 之后每来一条就要展开
+// 数组再 sort，O(n log n) 加两次分配，线性扫描一趟就够。严格小于保证并列时取到
+// 先插入的那条，与稳定排序取 [0] 的结果一致。
+function extremeBy(values,compare){let best;for(const value of values)if(best===undefined||compare(value,best)<0)best=value;return best;}
+// compareNewest 是新的在前，所以「最旧」是它的最大值：把比较反过来取最小即可。
+const oldestBy=values=>extremeBy(values,(a,b)=>compareNewest(b,a));
 function giftDisplayTier(e,rules){if(e.kind!=='gift')return null;const name=String(e.gift??'').trim(),custom=rules.customGifts?.find(rule=>rule.name===name);return custom?custom.tier:amountOf(e);}
 function giftExpiry(e,rules){const value=giftDisplayTier(e,rules),at=eventData(e).at;return value!==null&&value>=rules.giftThreshold&&(rules.giftMaximum===null||value<=rules.giftMaximum)&&Number.isFinite(at)?at+rules.giftDuration*1000:null;}
 const ATTENTION_KEYS=['showGiftPins','showFollowPins','showDiamondPins','showNotices','highlightGifts','highlightFollows','highlightAdmins','highlightCrowds','softEffects','scoreNotifications'];
@@ -580,7 +586,7 @@ function identityClass(e){
 }
 function rememberScore(e,target){
   const records=target?.scoreRecords||scoreRecords,key=eventKey(e);if(records.has(key)||!eventScoreCommand(e))return;
-  records.set(key,e);if(records.size>MAX_SCORES){const oldest=[...records.values()].sort(compareScores)[0];records.delete(eventKey(oldest));(target?.scoreChecks||scoreChecks).delete(eventKey(oldest));}if(!records.has(key))return;if(target?target===preview:!preview)scoreFeedDirty=true;
+  records.set(key,e);if(records.size>MAX_SCORES){const oldest=extremeBy(records.values(),compareScores);records.delete(eventKey(oldest));(target?.scoreChecks||scoreChecks).delete(eventKey(oldest));}if(!records.has(key))return;if(target?target===preview:!preview)scoreFeedDirty=true;
   const state=(target?pageState:preview?.livePageState||pageState).scores;if(!state.live)state.newMessages=true;
   if(target?view!=='scores':preview||view!=='scores')state.unread=true;
 }
@@ -833,7 +839,7 @@ function addGiftCapsule(e,capsules=giftCapsules){
 function rememberGift(e,target){
   const records=target?.giftRecords||giftRecords,capsules=target?.giftCapsules||giftCapsules,key=eventKey(e);if(records.has(key))return;
   records.set(key,e);addGiftCapsule(e,capsules);if(target?target===preview:!preview){giftFeedDirty=true;priorityDirty=true;}
-  if(records.size>MAX_GIFTS){const oldest=[...records.values()].sort(compareNewest).pop();records.delete(eventKey(oldest));}
+  if(records.size>MAX_GIFTS){records.delete(eventKey(oldestBy(records.values())));}
 }
 function pruneGiftCapsules(capsules=giftCapsules,now=Date.now()){let changed=false;for(const [key,capsule] of capsules)if(capsule.expires<=now){capsules.delete(key);changed=true;}return changed;}
 function updateGiftRules(previous){
@@ -883,7 +889,7 @@ function rememberDiamond(e,target){
   const cards=target?.diamondCards||diamondCards,key=eventKey(e);if(cards.has(key))return;
   cards.set(key,e);if(target?target===preview:!preview)priorityDirty=true;
   // 多留一点，好让过期的那几条自然淘汰而不是被新的挤掉。
-  if(cards.size>MAX_DIAMOND_PINS*4){const oldest=[...cards.values()].sort(compareNewest).pop();cards.delete(eventKey(oldest));}
+  if(cards.size>MAX_DIAMOND_PINS*4){cards.delete(eventKey(oldestBy(cards.values())));}
 }
 function diamondNode(e,row){
   if(!row){row=make('article');row._line=make('div','message-line');row._identity=identity(e);row._action=make('span','diamond-action');row._what=make('span','diamond-what');row._line.append(row._identity,row._action,row._what);row.append(row._line);}
@@ -936,12 +942,24 @@ function cancelScheduledRender(){clearTimeout(renderTimer);cancelAnimationFrame(
 function render(){
   const started=performance.now();cancelScheduledRender();const snapshot=pendingScrollRestore||captureScroll(view);pendingScrollRestore=null;
   if(chatRows.some(row=>row.type==='crowd'&&row.group.lastMs+crowdWindowMs()<=Date.now()))chatFeedDirty=true;
+  // 预览期间实时侧仍在收消息：这一趟丢掉返回值，要的是它的副作用——吸并同文本分组、
+  // 清掉过期分组、推进教练提醒。删掉它，退出预览时会看到一堆本该早就合并掉的行。
   if(preview)projectChat();
   chatRows=preview?projectChat(preview.chatGroups,preview.follows,preview.notices):projectChat();renderChatFeed();renderHistoryFeed();
   renderPriority();restoreScroll(view,snapshot);updateNewButtons();
   clearTimeout(chatExpiryTimer);chatExpiryTimer=0;
-  const deadlines=chatRows.filter(row=>row.type==='crowd').map(row=>row.group.lastMs+crowdWindowMs()).concat([...giftCapsules.values(),...(preview?[...preview.giftCapsules.values()]:[])].map(capsule=>capsule.expires),[...followCards.values(),...(preview?[...preview.followCards.values()]:[])].filter(info=>followed(info.event)).map(followExpiry).filter(deadline=>deadline>Date.now()),[...diamondCards.values(),...(preview?[...preview.diamondCards.values()]:[])].map(diamondExpiry).filter(deadline=>deadline>Date.now()));
-  if(deadlines.length)chatExpiryTimer=setTimeout(()=>{chatExpiryTimer=0;render();},Math.max(0,deadlines.reduce((a,b)=>Math.min(a,b))-Date.now()));
+  // 下一个到期时刻：原先是 filter/map/concat 四趟遍历建出临时数组再 reduce 取最小，
+  // 现在一趟扫过去累一个 min，每次 render 都省掉那几个中间数组。
+  // 人群行与礼物胶囊照原样无条件计入（它们在上面已分别被 projectChat 与 pruneGiftCapsules
+  // 滤过一遍），关注与钻粉两类仍只看未来的那些——与改写前逐字一致。
+  const now=Date.now(),windowMs=crowdWindowMs();let soonest=Infinity;
+  const note=deadline=>{if(deadline<soonest)soonest=deadline;};
+  const noteFuture=deadline=>{if(deadline>now)note(deadline);};
+  for(const row of chatRows)if(row.type==='crowd')note(row.group.lastMs+windowMs);
+  for(const source of [giftCapsules,preview?.giftCapsules])if(source)for(const capsule of source.values())note(capsule.expires);
+  for(const source of [followCards,preview?.followCards])if(source)for(const info of source.values())if(followed(info.event))noteFuture(followExpiry(info));
+  for(const source of [diamondCards,preview?.diamondCards])if(source)for(const card of source.values())noteFuture(diamondExpiry(card));
+  if(soonest<Infinity)chatExpiryTimer=setTimeout(()=>{chatExpiryTimer=0;render();},Math.max(0,soonest-Date.now()));
   const cost=performance.now()-started;renderGap=Math.max(RENDER_GAP_MS,cost*2);
   nextRenderAt=Math.max(started,Math.min(nextRenderAt,started+renderGap))+cost+renderGap;
 }

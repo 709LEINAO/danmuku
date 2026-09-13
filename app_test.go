@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"strings"
+	"sync"
 	"testing"
 	"time"
 )
@@ -249,6 +250,38 @@ func TestPaidPropsAreNotMarkedProp(t *testing.T) {
 	}
 }
 
+// Fields 的白名单原先由 Event.MarshalJSON 兜底，现在改成 frame 前显式 wireEvent，
+// 所以这条护栏必须有：漏掉那一步，一条 chatmsg 会从 ~300 字节涨回 ~1 KB，
+// 300 条回放乘 300 倍。voiceFields 则一个字节都不该出门。
+func TestMessageFrameProjectsFields(t *testing.T) {
+	hub := newHub("1", "g")
+	_, _, events := hub.Subscribe()
+	fields := chatFields("1", "喂")
+	fields["col"] = "2"
+	fields["nail"] = "3721_1"
+	fields["hc"] = "fedcba9876543210fedcba9876543210"
+	hub.Packet(fields, "1")
+	var envelope struct {
+		Data struct {
+			Fields      map[string]string `json:"fields"`
+			VoiceFields map[string]string `json:"voiceFields"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(frameBody(t, <-events, "message"), &envelope); err != nil {
+		t.Fatalf("消息信封无法解析：%v", err)
+	}
+	if got := envelope.Data.Fields; len(got) != 1 || got["col"] != "2" {
+		t.Fatalf("fields = %v，期望只留 col", got)
+	}
+	if envelope.Data.VoiceFields != nil {
+		t.Fatalf("voiceFields 不该出现在帧里：%v", envelope.Data.VoiceFields)
+	}
+	// 服务端内部照常持全量：孵化产物回溯要看 ct，徽章要看 nail。
+	if fields["nail"] == "" || fields["hc"] == "" {
+		t.Fatal("投影把调用方手里的原始字段表也改了")
+	}
+}
+
 func benchEvent() Event {
 	return Event{
 		Kind: "chat", Index: 1, Source: "chatmsg", At: "2026-09-12T19:00:00.123456+08:00",
@@ -265,16 +298,45 @@ func benchEvent() Event {
 
 // 一条消息扇出给 100 个观看者的编码成本。Shared 是现在的做法，PerSubscriber 是
 // 改动前的做法（每个 stream goroutine 各自 Marshal 一遍），留作护栏：
-// 实测 3.6 µs/2.8 KB vs 334 µs/242 KB，差 92 倍。1000 条/秒下后者光序列化就要
-// 334 ms/秒 CPU 加 242 MB/秒 分配，正是 100 观看者压测送达率跌到 56 % 的原因。
+// 实测 2.5 µs/2.0 KB vs 229 µs/159 KB，差 93 倍。1000 条/秒下后者光序列化就要
+// 229 ms/秒 CPU 加 159 MB/秒 分配，正是 100 观看者压测送达率跌到 56 % 的原因。
+// （两边都随「去掉 Event.MarshalJSON、改单趟编码」一起降了约三成，倍数不变。）
 const benchViewers = 100
+
+// 解码是与观看者数无关的固定成本，每条消息一次。护栏盯的是分配数：
+// 34 字段的 chatmsg 应在 10 次以内，退回百次级就说明 unescapeSTT 的快路径没了。
+func BenchmarkDecodeSTT(b *testing.B) {
+	body := encodeSTT("type", "chatmsg", "rid", "231059", "ct", "1", "uid", "100004321", "nn", "压测观众4321",
+		"txt", "这条弹幕大概就是现场常见的长度，再带上几个字凑够",
+		"cid", "0123456789abcdef0123456789abcdef", "ic", "avatar_v3/202301/abcdef0123456789", "level", "77", "sahf", "0",
+		"cst", "1757700000000", "bnn", "压测牌", "bl", "12", "brid", "231059",
+		"hc", "fedcba9876543210fedcba9876543210", "ol", "0", "rev", "0", "hl", "0", "ifs", "0", "el", "", "lk", "", "dms", "5",
+		"pdg", "25", "pdk", "21", "ext", "", "col", "3", "nl", "0", "pg", "1", "rg", "1", "urlev", "1")
+	b.ReportAllocs()
+	b.SetBytes(int64(len(body)))
+	for i := 0; i < b.N; i++ {
+		if len(decodeSTT(body)) == 0 {
+			b.Fatal("解出空表")
+		}
+	}
+}
+
+// 转义字段照常还原，快路径不能把它们漏过去。
+func TestDecodeSTTKeepsEscapes(t *testing.T) {
+	fields := decodeSTT(encodeSTT("txt", "a@b/c", "nn", "@@//", "plain", "无转义", "empty", ""))
+	for key, want := range map[string]string{"txt": "a@b/c", "nn": "@@//", "plain": "无转义", "empty": ""} {
+		if got := fields[key]; got != want {
+			t.Errorf("%s = %q，期望 %q", key, got, want)
+		}
+	}
+}
 
 func BenchmarkFanoutShared(b *testing.B) {
 	hub := newHub("231059", "g")
 	event := benchEvent()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		frame := hub.frame("message", event)
+		frame := hub.frame("message", wireEvent(event))
 		for range benchViewers {
 			_ = frame
 		}
@@ -287,7 +349,7 @@ func BenchmarkFanoutPerSubscriber(b *testing.B) {
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
 		for range benchViewers {
-			json.Marshal(roomEnvelope{RoomID: &roomID, Generation: &generation, Data: event})
+			json.Marshal(roomEnvelope{RoomID: &roomID, Generation: &generation, Data: wireEvent(event)})
 		}
 	}
 }
@@ -304,4 +366,123 @@ func TestSlowSubscriberDropped(t *testing.T) {
 	if _, open := <-slow; open {
 		t.Fatal("被踢的订阅通道应已关闭并排空")
 	}
+}
+
+// 合帧改的是写出去的字节，错一点点订阅者就会读到半条 SSE 记录，所以逐条钉死。
+func TestCoalesce(t *testing.T) {
+	frame := func(body string) []byte { return []byte("event: message\ndata: " + body + "\n\n") }
+
+	t.Run("队里没货时原样返回，不拷贝", func(t *testing.T) {
+		events := make(chan []byte, 4)
+		first := frame("一")
+		payload, _, ended := coalesce(first, events, nil)
+		if ended {
+			t.Fatal("通道没关却报 ended")
+		}
+		if &payload[0] != &first[0] {
+			t.Fatal("只有一帧时不该拷贝，应直接复用 hub 那份共享字节")
+		}
+	})
+
+	t.Run("已排队的一并带走且保持顺序", func(t *testing.T) {
+		events := make(chan []byte, 4)
+		events <- frame("二")
+		events <- frame("三")
+		payload, buffer, ended := coalesce(frame("一"), events, nil)
+		if ended {
+			t.Fatal("通道没关却报 ended")
+		}
+		want := string(frame("一")) + string(frame("二")) + string(frame("三"))
+		if string(payload) != want {
+			t.Fatalf("合出来的是 %q\n期望 %q", payload, want)
+		}
+		if len(events) != 0 {
+			t.Fatalf("通道里还剩 %d 条没取走", len(events))
+		}
+		if cap(buffer) == 0 {
+			t.Fatal("没把缓冲交回去复用")
+		}
+	})
+
+	t.Run("排空途中被关掉：已取到的照发，同时报 ended", func(t *testing.T) {
+		events := make(chan []byte, 4)
+		events <- frame("二")
+		close(events)
+		payload, _, ended := coalesce(frame("一"), events, nil)
+		if !ended {
+			t.Fatal("通道已关却没报 ended")
+		}
+		if want := string(frame("一")) + string(frame("二")); string(payload) != want {
+			t.Fatalf("丢了已经取到的帧：%q", payload)
+		}
+	})
+
+	t.Run("攒够上限就停手，剩下的留给下一轮", func(t *testing.T) {
+		big := make([]byte, 8<<10)
+		for i := range big {
+			big[i] = 'x'
+		}
+		events := make(chan []byte, 64)
+		for range 40 {
+			events <- big
+		}
+		payload, _, _ := coalesce(big, events, nil)
+		if len(payload) < maxStreamBatch || len(payload) > maxStreamBatch+len(big) {
+			t.Fatalf("一批 %d 字节，上限是 %d", len(payload), maxStreamBatch)
+		}
+		if len(events) == 0 {
+			t.Fatal("应当留一部分给下一轮，而不是一次全吞")
+		}
+	})
+
+	t.Run("复用缓冲不串味", func(t *testing.T) {
+		events := make(chan []byte, 4)
+		events <- frame("旧二")
+		_, buffer, _ := coalesce(frame("旧一"), events, nil)
+		events <- frame("新二")
+		payload, _, _ := coalesce(frame("新一"), events, buffer)
+		if want := string(frame("新一")) + string(frame("新二")); string(payload) != want {
+			t.Fatalf("上一轮的内容漏进来了：%q", payload)
+		}
+	})
+}
+
+// 订阅者来去与灌包同时进行，给 -race 一个真正的靶子。
+func TestHubConcurrentSubscribers(t *testing.T) {
+	hub := newHub("1", "g")
+	defer hub.Close()
+	stop := make(chan struct{})
+	var wait sync.WaitGroup
+	wait.Add(1)
+	go func() {
+		defer wait.Done()
+		for {
+			select {
+			case <-stop:
+				return
+			default:
+				hub.Packet(chatFields("1", "刷"), "1")
+			}
+		}
+	}()
+	for range 8 {
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			for range 50 {
+				_, _, events := hub.Subscribe()
+				go func() {
+					for range events {
+					}
+				}()
+				hub.IsSubscribed(events)
+				hub.Snapshot()
+				hub.StatusFrame()
+				hub.Unsubscribe(events)
+			}
+		}()
+	}
+	time.Sleep(150 * time.Millisecond)
+	close(stop)
+	wait.Wait()
 }

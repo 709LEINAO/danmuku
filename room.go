@@ -169,8 +169,12 @@ func (r roomResolver) Resolve(ctx context.Context, raw string) (Room, error) {
 	if err != nil {
 		return Room{}, err
 	}
+	// mobileTried 与 mobileErr 分开记：手机页成功会直接返回，所以往下走时 mobileErr
+	// 为 nil 只可能意味着这条路压根没开。以前靠 err 是否为 nil 兼职表达这件事，
+	// 三处判断都得反着读。
+	mobileTried := r.MobileBase != ""
 	var mobileErr error
-	if r.MobileBase != "" {
+	if mobileTried {
 		// 短号在旧 API 里可能指到别的房间，手机页给的才是真 RID。
 		mobileCtx, cancel := context.WithTimeout(ctx, 5*time.Second)
 		var room Room
@@ -184,7 +188,8 @@ func (r roomResolver) Resolve(ctx context.Context, raw string) (Room, error) {
 		}
 	}
 	room, apiErr := r.fromAPI(ctx, input)
-	if apiErr == nil && mobileErr == nil {
+	// 手机页失败过就不能就此收工：短号在旧 API 里可能指到别的房间，还要拿桌面页核对。
+	if apiErr == nil && !mobileTried {
 		return room, nil
 	}
 	if ctx.Err() != nil {
@@ -203,7 +208,7 @@ func (r roomResolver) Resolve(ctx context.Context, raw string) (Room, error) {
 					room.Name = first(room.Name, name)
 					return room, nil
 				}
-				if mobileErr != nil && id != input {
+				if mobileTried && id != input {
 					// 只采用 RID 与桌面页一致的那份元数据。
 					canonical, err := r.fromAPI(ctx, id)
 					if err == nil && canonical.ID == id {
@@ -226,7 +231,7 @@ func (r roomResolver) Resolve(ctx context.Context, raw string) (Room, error) {
 	if apiErr == nil {
 		return room, nil
 	}
-	if mobileErr != nil {
+	if mobileTried {
 		return Room{}, fmt.Errorf("房间信息获取失败（手机版: %v；API: %v；网页: %v）", mobileErr, apiErr, pageErr)
 	}
 	return Room{}, fmt.Errorf("房间信息获取失败（API: %v；网页: %v）", apiErr, pageErr)

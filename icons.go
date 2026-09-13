@@ -69,13 +69,6 @@ type cachedAsset struct {
 	usedAt       time.Time
 }
 
-// 开播瞬间同一张图会被几十条弹幕同时要到，单飞保证只出门一次。
-type iconFetch struct {
-	done  chan struct{}
-	asset *cachedAsset
-	err   error
-}
-
 type iconEndpoints struct {
 	Noble    string
 	Medal    string
@@ -98,21 +91,23 @@ type iconStore struct {
 	now       func() time.Time
 	interval  time.Duration
 
-	mu       sync.Mutex
-	catalog  *iconCatalog
-	assets   map[string]*cachedAsset
-	bytes    int
-	inflight map[string]*iconFetch
+	mu      sync.Mutex
+	catalog *iconCatalog
+	assets  map[string]*cachedAsset
+	bytes   int
+
+	// 开播瞬间同一张图会被几十条弹幕同时要到，单飞保证只出门一次（骨架见 flight.go）。
+	inflight flightGroup[string, *cachedAsset]
 
 	// Start/Close 同一把锁：两个 sync.Once 各管一半时，先 Close 再 Start 会重复关 done。
 	lifecycle sync.Mutex
 	started   bool
 	stopped   bool
-	cancel    context.CancelFunc
 	done      chan struct{}
 
 	// store 的存活期：回源脱离发起它的浏览器请求，但不脱离进程，否则 Close() 要干等
-	// 一轮下载超时。建在构造函数里，不调 Start 也能收干净。
+	// 一轮下载超时。建在构造函数里，不调 Start 也能收干净。刷新循环也直接用它——
+	// 原先 Start 另建了一个 ctx，但两者只在 Close 里前后脚取消，是同一件事写了两遍。
 	life    context.Context
 	endLife context.CancelFunc
 }
@@ -125,7 +120,6 @@ func newIconStore() *iconStore {
 		now:       time.Now,
 		interval:  iconRefreshInterval,
 		assets:    make(map[string]*cachedAsset),
-		inflight:  make(map[string]*iconFetch),
 		done:      make(chan struct{}),
 		life:      life,
 		endLife:   endLife,
@@ -140,9 +134,7 @@ func (s *iconStore) Start() {
 		return
 	}
 	s.started = true
-	ctx, cancel := context.WithCancel(context.Background())
-	s.cancel = cancel
-	go s.refreshLoop(ctx)
+	go s.refreshLoop(s.life)
 }
 
 // 可重复、可并发调用，都等到刷新循环真正退出才返回。
@@ -151,9 +143,7 @@ func (s *iconStore) Close() {
 	if !s.stopped {
 		s.stopped = true
 		s.endLife()
-		if s.started {
-			s.cancel()
-		} else {
+		if !s.started {
 			close(s.done)
 		}
 	}
@@ -680,34 +670,17 @@ func (s *iconStore) leadContext(ctx context.Context) (context.Context, func()) {
 	return lead, func() { stop(); cancel() }
 }
 
-// 同键只回源一次，其余请求在 done 上等。
+// 同键只回源一次，其余请求等着领头者的结果。
 func (s *iconStore) fetch(ctx context.Context, key, target string, previous *cachedAsset) (*cachedAsset, error) {
-	s.mu.Lock()
-	if pending, exists := s.inflight[key]; exists {
-		s.mu.Unlock()
-		select {
-		case <-pending.done:
-			return pending.asset, pending.err
-		case <-ctx.Done():
-			return nil, ctx.Err()
+	return s.inflight.do(ctx, key, func() (*cachedAsset, error) {
+		lead, release := s.leadContext(ctx)
+		asset, err := s.download(lead, target, previous)
+		release()
+		if err == nil {
+			s.store(key, asset)
 		}
-	}
-	pending := &iconFetch{done: make(chan struct{})}
-	s.inflight[key] = pending
-	s.mu.Unlock()
-
-	lead, release := s.leadContext(ctx)
-	asset, err := s.download(lead, target, previous)
-	release()
-	s.mu.Lock()
-	if err == nil {
-		s.storeLocked(key, asset)
-	}
-	delete(s.inflight, key)
-	s.mu.Unlock()
-	pending.asset, pending.err = asset, err
-	close(pending.done)
-	return asset, err
+		return asset, err
+	})
 }
 
 func (s *iconStore) revalidate(ctx context.Context, key string) {

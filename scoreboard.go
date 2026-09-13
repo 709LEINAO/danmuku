@@ -63,10 +63,10 @@ type scoreboardSnapshot struct {
 	UpdatedAt string             `json:"updatedAt"`
 }
 
-type scoreboardCall struct {
-	done chan struct{}
+// 单飞的领头/跟随骨架在 flight.go，这里只管缓存与时限。
+type scoreboardResult struct {
 	snap scoreboardSnapshot
-	err  error
+	at   time.Time
 }
 
 type scoreboardStore struct {
@@ -74,7 +74,7 @@ type scoreboardStore struct {
 	client  *http.Client
 	cached  scoreboardSnapshot
 	fetched time.Time
-	call    *scoreboardCall
+	single  flight[scoreboardResult]
 	now     func() time.Time
 }
 
@@ -90,37 +90,21 @@ func (s *scoreboardStore) snapshot(ctx context.Context) (scoreboardSnapshot, tim
 		s.mu.Unlock()
 		return snap, at, nil
 	}
-	if call := s.call; call != nil {
-		s.mu.Unlock()
-		select {
-		case <-call.done:
-			s.mu.Lock()
-			at := s.fetched
-			s.mu.Unlock()
-			return call.snap, at, call.err
-		case <-ctx.Done():
-			return scoreboardSnapshot{}, time.Time{}, ctx.Err()
+	s.mu.Unlock()
+	result, err := s.single.do(ctx, func() (scoreboardResult, error) {
+		// 回源与领头者解绑：他关掉标签页不该让同在等的其他页面一起拿到 context canceled。
+		lead, cancel := context.WithTimeout(context.WithoutCancel(ctx), scoreboardLead)
+		snap, err := s.fetch(lead)
+		cancel()
+		// 在这里落缓存，跟随者是在 fetch 返回之后才被放行的，读不到上一轮的 fetched。
+		s.mu.Lock()
+		defer s.mu.Unlock()
+		if err == nil {
+			s.cached, s.fetched = snap, s.now()
 		}
-	}
-	call := &scoreboardCall{done: make(chan struct{})}
-	s.call = call
-	s.mu.Unlock()
-
-	// 回源与领头者解绑：他关掉标签页不该让同在等的其他页面一起拿到 context canceled。
-	lead, cancel := context.WithTimeout(context.WithoutCancel(ctx), scoreboardLead)
-	call.snap, call.err = s.fetch(lead)
-	cancel()
-
-	// 先落缓存再放行跟随者，否则他们会读到上一轮的 fetched。
-	s.mu.Lock()
-	s.call = nil
-	if call.err == nil {
-		s.cached, s.fetched = call.snap, s.now()
-	}
-	at := s.fetched
-	s.mu.Unlock()
-	close(call.done)
-	return call.snap, at, call.err
+		return scoreboardResult{snap: snap, at: s.fetched}, err
+	})
+	return result.snap, result.at, err
 }
 
 func (s *scoreboardStore) fetch(ctx context.Context) (scoreboardSnapshot, error) {

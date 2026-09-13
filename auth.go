@@ -37,9 +37,12 @@ var loginHTML string
 
 var loginPage = template.Must(template.New("login").Parse(loginHTML))
 
+// 撤销用 context 而不是裸 channel：请求侧可以直接 context.AfterFunc 挂上去，不必
+// 为每个请求起一个 goroutine 盯着；CancelFunc 又是幂等的，重复撤销不会 panic。
 type authSession struct {
 	expires time.Time
-	done    chan struct{}
+	ctx     context.Context
+	end     context.CancelFunc
 }
 
 type loginFailures struct {
@@ -135,7 +138,7 @@ func (a *passwordAuth) session(r *http.Request) *authSession {
 	defer a.mu.Unlock()
 	session := a.sessions[key]
 	if session != nil && !a.now().Before(session.expires) {
-		close(session.done)
+		session.end()
 		delete(a.sessions, key)
 		return nil
 	}
@@ -147,7 +150,7 @@ func (a *passwordAuth) revoke(r *http.Request) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	if session := a.sessions[key]; session != nil {
-		close(session.done)
+		session.end()
 		delete(a.sessions, key)
 	}
 }
@@ -160,21 +163,22 @@ func (a *passwordAuth) issue(w http.ResponseWriter, r *http.Request) error {
 	token := base64.RawURLEncoding.EncodeToString(random[:])
 	key := sha256.Sum256([]byte(token))
 	now := a.now()
-	session := &authSession{expires: now.Add(a.lifetime), done: make(chan struct{})}
+	sessionCtx, endSession := context.WithCancel(context.Background())
+	session := &authSession{expires: now.Add(a.lifetime), ctx: sessionCtx, end: endSession}
 	a.revoke(r)
 	a.mu.Lock()
 	var oldestKey [32]byte
 	var oldest *authSession
 	for candidate, existing := range a.sessions {
 		if !now.Before(existing.expires) {
-			close(existing.done)
+			existing.end()
 			delete(a.sessions, candidate)
 		} else if oldest == nil || existing.expires.Before(oldest.expires) {
 			oldestKey, oldest = candidate, existing
 		}
 	}
 	if len(a.sessions) >= maxAuthSessions {
-		close(oldest.done)
+		oldest.end()
 		delete(a.sessions, oldestKey)
 	}
 	a.sessions[key] = session
