@@ -135,6 +135,11 @@ func (m *roomManager) resolveRoom(ctx context.Context, input string) (Room, erro
 	}
 	room, err := m.resolver.Resolve(ctx, key)
 	if err != nil {
+		// resolver 拼了一条带三个来源的诊断，调用方只会把它换成一句笼统的「房间信息获取
+		// 失败」交给页面，于是线上什么都查不到。这里留底；调用方取消（关标签页）不算故障。
+		if ctx.Err() == nil {
+			log.Printf("房间解析失败 input=%q：%v", key, err)
+		}
 		return room, err
 	}
 	m.mu.Lock()
@@ -172,7 +177,7 @@ func (m *roomManager) Resolve(ctx context.Context, input string) (Room, error) {
 	return m.resolveRoom(ctx, input)
 }
 
-func (m *roomManager) Subscribe(ctx context.Context, input string) (*roomSubscription, error) {
+func (m *roomManager) Subscribe(ctx context.Context, input, lastEventID string) (*roomSubscription, error) {
 	m.mu.Lock()
 	if m.closed {
 		m.mu.Unlock()
@@ -255,7 +260,7 @@ func (m *roomManager) Subscribe(ctx context.Context, input string) (*roomSubscri
 		m.stopIdleLocked(worker)
 		worker.viewers++
 		m.mu.Unlock()
-		statusFrame, history, events := worker.hub.Subscribe()
+		statusFrame, history, events := worker.hub.Subscribe(lastEventID)
 		acquired = true
 		return &roomSubscription{manager: m, worker: worker, statusFrame: statusFrame, history: history, events: events}, nil
 	}
@@ -325,7 +330,14 @@ func (m *roomManager) loadGiftCatalog(ctx context.Context, worker *roomWorker, d
 	for attempt := 1; ; attempt++ {
 		// 道具表全站共享，领头者的回源不能跟着某一个房间走，否则这个房间被回收会
 		// 连累正等同一张表的其他房间。
-		catalog, err := fetchGiftCatalog(ctx, worker.room.ID, m.catalogHTTP, m.props, m.propLeadContext)
+		// 房间目录先到先用，不等全站道具表；mergeGifts 让后到的那份覆盖，而完整的那份
+		// 里房间目录本来就压着道具表，所以两次合并的先后不会把价搞反。
+		early := func(partial giftCatalog) {
+			if ctx.Err() == nil {
+				worker.hub.mergeGifts(worker.room.ID, partial)
+			}
+		}
+		catalog, err := fetchGiftCatalog(ctx, worker.room.ID, m.catalogHTTP, m.props, m.propLeadContext, early)
 		if ctx.Err() != nil {
 			return
 		}

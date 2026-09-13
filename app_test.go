@@ -3,6 +3,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"net/http"
+	"net/http/httptest"
+	"strconv"
 	"strings"
 	"sync"
 	"testing"
@@ -13,21 +16,37 @@ func chatFields(room, text string) map[string]string {
 	return map[string]string{"type": "chatmsg", "rid": room, "uid": "42", "nn": "阿宝", "txt": text}
 }
 
-func frameBody(t *testing.T, frame []byte, name string) []byte {
+// 消息帧带 id: 行（供 Last-Event-ID 续传），状态帧与 reset 帧不带。data 里的正文换行
+// 一律是转义过的，所以按 \n 切行是安全的——TestFrameKeepsNewlinesEscaped 守的就是这条。
+func frameParts(t *testing.T, frame []byte, name string) (string, []byte) {
 	t.Helper()
-	prefix := []byte("event: " + name + "\ndata: ")
-	if !bytes.HasPrefix(frame, prefix) {
-		t.Fatalf("帧前缀不是 %q：%q", name, frame)
-	}
-	if !bytes.HasSuffix(frame, []byte("\n\n")) {
+	text := string(frame)
+	if !strings.HasSuffix(text, "\n\n") {
 		t.Fatalf("帧未以空行结束：%q", frame)
 	}
-	return bytes.TrimSuffix(bytes.TrimPrefix(frame, prefix), []byte("\n\n"))
+	lines := strings.Split(strings.TrimSuffix(text, "\n\n"), "\n")
+	if len(lines) < 2 || lines[0] != "event: "+name {
+		t.Fatalf("帧前缀不是 %q：%q", name, frame)
+	}
+	id, rest := "", lines[1:]
+	if after, found := strings.CutPrefix(rest[0], "id: "); found {
+		id, rest = after, rest[1:]
+	}
+	if len(rest) != 1 || !strings.HasPrefix(rest[0], "data: ") {
+		t.Fatalf("data 行异常：%q", frame)
+	}
+	return id, []byte(strings.TrimPrefix(rest[0], "data: "))
+}
+
+func frameBody(t *testing.T, frame []byte, name string) []byte {
+	t.Helper()
+	_, body := frameParts(t, frame, name)
+	return body
 }
 
 func TestFrameEnvelope(t *testing.T) {
 	hub := newHub("231059", "abc-1")
-	body := frameBody(t, hub.frame("message", Event{Kind: "chat", Text: "喂"}), "message")
+	body := frameBody(t, hub.frame("message", "", Event{Kind: "chat", Text: "喂"}), "message")
 	var envelope struct {
 		RoomID     string          `json:"roomId"`
 		Generation string          `json:"generation"`
@@ -48,17 +67,17 @@ func TestFrameKeepsNewlinesEscaped(t *testing.T) {
 	if len(hub.history) != 1 {
 		t.Fatalf("历史 = %d 条，期望 1", len(hub.history))
 	}
-	// event 行 1 个 + data 行 1 个 + 结尾空行 1 个。
-	if count := bytes.Count(hub.history[0], []byte("\n")); count != 3 {
-		t.Fatalf("帧含 %d 个换行，期望 3：%q", count, hub.history[0])
+	// event 行 1 个 + id 行 1 个 + data 行 1 个 + 结尾空行 1 个。
+	if count := bytes.Count(hub.history[0], []byte("\n")); count != 4 {
+		t.Fatalf("帧含 %d 个换行，期望 4：%q", count, hub.history[0])
 	}
 }
 
 // 这次改动的核心：一条消息全房间只编码一次，订阅者与历史共享同一份字节。
 func TestBroadcastEncodesOnce(t *testing.T) {
 	hub := newHub("1", "g")
-	_, _, first := hub.Subscribe()
-	_, _, second := hub.Subscribe()
+	_, _, first := hub.Subscribe("")
+	_, _, second := hub.Subscribe("")
 	hub.Packet(chatFields("1", "喂"), "1")
 	a, b := <-first, <-second
 	if len(a) == 0 || &a[0] != &b[0] {
@@ -73,7 +92,7 @@ func TestSubscribeReplaysHistory(t *testing.T) {
 	hub := newHub("1", "g")
 	hub.Packet(chatFields("1", "一"), "1")
 	hub.Packet(chatFields("1", "二"), "1")
-	statusFrame, history, _ := hub.Subscribe()
+	statusFrame, history, _ := hub.Subscribe("")
 	frameBody(t, statusFrame, "status")
 	if len(history) != 2 {
 		t.Fatalf("回放 = %d 条，期望 2", len(history))
@@ -209,7 +228,7 @@ func TestDiamondBurstMatchesPinRows(t *testing.T) {
 
 func TestDiamondPacketReachesSubscriber(t *testing.T) {
 	hub := newHub("1", "g")
-	_, _, events := hub.Subscribe()
+	_, _, events := hub.Subscribe("")
 	hub.Packet(diamondFields("1", map[string]string{"mn": "12"}), "1")
 	frame := <-events
 	body := frameBody(t, frame, "message")
@@ -255,7 +274,7 @@ func TestPaidPropsAreNotMarkedProp(t *testing.T) {
 // 300 条回放乘 300 倍。voiceFields 则一个字节都不该出门。
 func TestMessageFrameProjectsFields(t *testing.T) {
 	hub := newHub("1", "g")
-	_, _, events := hub.Subscribe()
+	_, _, events := hub.Subscribe("")
 	fields := chatFields("1", "喂")
 	fields["col"] = "2"
 	fields["nail"] = "3721_1"
@@ -336,7 +355,7 @@ func BenchmarkFanoutShared(b *testing.B) {
 	event := benchEvent()
 	b.ReportAllocs()
 	for i := 0; i < b.N; i++ {
-		frame := hub.frame("message", wireEvent(event))
+		frame := hub.frame("message", "", wireEvent(event))
 		for range benchViewers {
 			_ = frame
 		}
@@ -356,7 +375,7 @@ func BenchmarkFanoutPerSubscriber(b *testing.B) {
 
 func TestSlowSubscriberDropped(t *testing.T) {
 	hub := newHub("1", "g")
-	_, _, slow := hub.Subscribe()
+	_, _, slow := hub.Subscribe("")
 	for range subscriberQueue + 1 {
 		hub.Packet(chatFields("1", "刷"), "1")
 	}
@@ -470,7 +489,7 @@ func TestHubConcurrentSubscribers(t *testing.T) {
 		go func() {
 			defer wait.Done()
 			for range 50 {
-				_, _, events := hub.Subscribe()
+				_, _, events := hub.Subscribe("")
 				go func() {
 					for range events {
 					}
@@ -485,4 +504,217 @@ func TestHubConcurrentSubscribers(t *testing.T) {
 	time.Sleep(150 * time.Millisecond)
 	close(stop)
 	wait.Wait()
+}
+
+// 断线重连只补漏掉的那几条，而不是又推一遍 300 条。整套靠浏览器自动回传的
+// Last-Event-ID 驱动，前端不用改。
+func TestSubscribeResumesFromLastEventID(t *testing.T) {
+	fill := func(count int) (*eventHub, []string) {
+		hub := newHub("1", "g")
+		ids := make([]string, 0, count)
+		for i := range count {
+			hub.Packet(chatFields("1", strconv.Itoa(i)), "1")
+			id, _ := frameParts(t, hub.history[len(hub.history)-1], "message")
+			ids = append(ids, id)
+		}
+		return hub, ids
+	}
+
+	t.Run("从第 N 条之后续上", func(t *testing.T) {
+		hub, ids := fill(5)
+		_, history, _ := hub.Subscribe(ids[1])
+		if len(history) != 3 {
+			t.Fatalf("回放 %d 条，期望 3", len(history))
+		}
+		for index, want := range []string{`"2"`, `"3"`, `"4"`} {
+			if !bytes.Contains(history[index], []byte(want)) {
+				t.Errorf("第 %d 条不含 %s：%q", index, want, history[index])
+			}
+		}
+	})
+
+	t.Run("没带 Last-Event-ID 就全量", func(t *testing.T) {
+		hub, _ := fill(5)
+		if _, history, _ := hub.Subscribe(""); len(history) != 5 {
+			t.Fatalf("回放 %d 条，期望 5", len(history))
+		}
+	})
+
+	t.Run("generation 对不上就全量", func(t *testing.T) {
+		hub, _ := fill(5)
+		if _, history, _ := hub.Subscribe("别的generation:2"); len(history) != 5 {
+			t.Fatalf("回放 %d 条，期望 5", len(history))
+		}
+	})
+
+	t.Run("解析不出来的 id 就全量", func(t *testing.T) {
+		hub, _ := fill(5)
+		for _, bogus := range []string{"garbage", "g:", "g:zz!", ":", "g:-1", "g:0:1"} {
+			if _, history, _ := hub.Subscribe(bogus); len(history) != 5 {
+				t.Fatalf("id=%q 回放 %d 条，期望全量 5", bogus, len(history))
+			}
+		}
+	})
+
+	t.Run("已经追平就不重发", func(t *testing.T) {
+		hub, ids := fill(5)
+		if _, history, _ := hub.Subscribe(ids[4]); len(history) != 0 {
+			t.Fatalf("回放 %d 条，期望 0", len(history))
+		}
+	})
+
+	t.Run("客户端报的比我们手上的还新也不重发", func(t *testing.T) {
+		hub, _ := fill(5)
+		if _, history, _ := hub.Subscribe("g:" + strconv.FormatUint(9999, 36)); len(history) != 0 {
+			t.Fatalf("回放 %d 条，期望 0", len(history))
+		}
+	})
+
+	t.Run("落后得比历史窗口还多就全量", func(t *testing.T) {
+		hub, ids := fill(historyLimit + 20)
+		_, history, _ := hub.Subscribe(ids[0])
+		if len(history) != historyLimit {
+			t.Fatalf("回放 %d 条，期望全量 %d", len(history), historyLimit)
+		}
+	})
+
+	t.Run("历史挤出去之后序号仍然对得上", func(t *testing.T) {
+		hub, ids := fill(historyLimit + 20)
+		_, history, _ := hub.Subscribe(ids[len(ids)-3])
+		if len(history) != 2 {
+			t.Fatalf("回放 %d 条，期望 2", len(history))
+		}
+		if !bytes.Contains(history[1], []byte(`"`+strconv.Itoa(historyLimit+19)+`"`)) {
+			t.Errorf("最后一条不是最新的那条：%q", history[1])
+		}
+	})
+}
+
+// 只有消息帧推进续传点；状态帧或 reset 帧带了 id 的话，重连会跳过真正的消息。
+func TestOnlyMessageFramesCarryID(t *testing.T) {
+	hub := newHub("1", "g")
+	hub.Packet(chatFields("1", "喂"), "1")
+	if id, _ := frameParts(t, hub.history[0], "message"); id != "g:0" {
+		t.Fatalf("消息帧 id = %q，期望 g:0", id)
+	}
+	if id, _ := frameParts(t, hub.StatusFrame(), "status"); id != "" {
+		t.Fatalf("状态帧不该带 id，拿到 %q", id)
+	}
+	if id, _ := frameParts(t, hub.ResetFrame(), "reset"); id != "" {
+		t.Fatalf("reset 帧不该带 id，拿到 %q", id)
+	}
+}
+
+
+// 房间目录先发一版、道具表到了再发完整的那版——这是「开房头几秒的礼物不计价」的解法。
+// 它引入的风险只有一个：分两次合并会不会把价搞反（道具表垫底的那层反而盖住房间目录）。
+// 这里钉死两次合并与一次合并结果相同。
+func TestEarlyRoomLayerThenFullMergeKeepsRoomPrice(t *testing.T) {
+	price := func(v int64) *int64 { return &v }
+	// 同一个 ID 两边都有：房间目录 ¥100 的真礼物，道具表把它当 ¥1 的免费道具。
+	rooms := giftCatalog{
+		"7": {Name: "飞机", UnitPrice: price(10000), Currency: "YUCHI", Source: "douyu-room-catalog"},
+	}
+	props := giftCatalog{
+		"7": {Name: "飞机", UnitPrice: price(100), Currency: "YUCHI", Source: "douyu-prop-config", Prop: true},
+		"9": {Name: "钻粉卡", UnitPrice: price(21800), Currency: "YUCHI", Source: "douyu-prop-config"},
+	}
+	full := props.supplement(rooms) // 完整那份里房间目录压着道具表
+
+	twoStep := newHub("1", "g")
+	twoStep.mergeGifts("1", rooms) // 先发：只有房间目录
+	twoStep.mergeGifts("1", full)  // 后补：完整的
+	oneStep := newHub("1", "g")
+	oneStep.mergeGifts("1", full)
+
+	for id, want := range map[string]struct {
+		price int64
+		prop  bool
+	}{"7": {10000, false}, "9": {21800, false}} {
+		got, ok := twoStep.gifts.lookup(id)
+		if !ok || got.UnitPrice == nil || *got.UnitPrice != want.price || got.Prop != want.prop {
+			t.Errorf("分两次合并后 %s = %+v，期望 价=%d prop=%v", id, got, want.price, want.prop)
+		}
+		other, _ := oneStep.gifts.lookup(id)
+		if got.Source != other.Source || *got.UnitPrice != *other.UnitPrice || got.Prop != other.Prop {
+			t.Errorf("%s 两次合并与一次合并结果不同：%+v vs %+v", id, got, other)
+		}
+	}
+	// 先发的那一版本身就得是可用的：这正是开房头几秒要靠它计价。
+	earlyOnly := newHub("1", "g")
+	earlyOnly.mergeGifts("1", rooms)
+	if got := earlyOnly.gifts.reference("7", "1"); got == nil || got.NominalAmount != "100.00" {
+		t.Fatalf("先发那版算不出参考价：%+v", got)
+	}
+}
+
+// 滑动续期：还在用就不该到点被踢。整晚挂着的手机原先会在第二天同一时刻被要求重新输口令。
+func TestSessionSlidingRenewal(t *testing.T) {
+	auth := newPasswordAuth("pw")
+	clock := time.Now()
+	auth.now = func() time.Time { return clock }
+
+	issued := httptest.NewRecorder()
+	if err := auth.issue(issued, httptest.NewRequest(http.MethodPost, "/login", nil)); err != nil {
+		t.Fatal(err)
+	}
+	cookie := issued.Result().Cookies()[0]
+	start := auth.now().Add(auth.lifetime)
+
+	reached := 0
+	guarded := auth.protect(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) { reached++ }))
+	visit := func() *http.Response {
+		request := httptest.NewRequest(http.MethodGet, "/", nil)
+		request.AddCookie(cookie)
+		recorder := httptest.NewRecorder()
+		guarded.ServeHTTP(recorder, request)
+		return recorder.Result()
+	}
+	refreshed := func(response *http.Response) bool {
+		for _, c := range response.Cookies() {
+			if c.Name == sessionCookieName && c.Value == cookie.Value {
+				return true
+			}
+		}
+		return false
+	}
+
+	// 刚签发就再来一个请求：不该每个响应都塞一次 Set-Cookie。
+	if response := visit(); response.StatusCode != http.StatusOK || refreshed(response) {
+		t.Fatalf("刚签发就续期了：status=%d", response.StatusCode)
+	}
+
+	// 过了续期门槛，才真的往后推。
+	clock = clock.Add(sessionRenewAfter + time.Minute)
+	response := visit()
+	if response.StatusCode != http.StatusOK || !refreshed(response) {
+		t.Fatalf("到了续期门槛却没续：status=%d", response.StatusCode)
+	}
+	session := auth.session(mustCookieRequest(cookie))
+	if session == nil || !session.deadline().After(start) {
+		t.Fatalf("到期时间没有往后推")
+	}
+
+	// 一直有活动，就一直不过期——原来的 24 小时硬上限已经被推掉了。
+	for range 30 {
+		clock = clock.Add(2 * time.Hour)
+		if response := visit(); response.StatusCode != http.StatusOK {
+			t.Fatalf("活跃会话在 %v 处被踢了：status=%d", clock, response.StatusCode)
+		}
+	}
+	if reached == 0 {
+		t.Fatal("请求根本没到 handler")
+	}
+
+	// 但真的不用了，还是会到期。
+	clock = clock.Add(auth.lifetime + time.Minute)
+	if response := visit(); response.StatusCode == http.StatusOK {
+		t.Fatal("闲置超过有效期仍然放行")
+	}
+}
+
+func mustCookieRequest(cookie *http.Cookie) *http.Request {
+	request := httptest.NewRequest(http.MethodGet, "/", nil)
+	request.AddCookie(cookie)
+	return request
 }

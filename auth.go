@@ -16,12 +16,16 @@ import (
 	"strconv"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 )
 
 const (
-	sessionCookieName   = "danmaku_session"
-	sessionLifetime     = 24 * time.Hour
+	sessionCookieName = "danmaku_session"
+	sessionLifetime   = 24 * time.Hour
+	// 滑动续期：有活动就把到期时间往后推，但不是每个请求都推——那样每个响应都要带一次
+	// Set-Cookie。距上次续期超过这么久才续一次。
+	sessionRenewAfter   = time.Hour
 	loginFailureWindow  = time.Minute
 	maxLoginFailures    = 5
 	maxLoginPeers       = 1024
@@ -39,10 +43,24 @@ var loginPage = template.Must(template.New("login").Parse(loginHTML))
 
 // 撤销用 context 而不是裸 channel：请求侧可以直接 context.AfterFunc 挂上去，不必
 // 为每个请求起一个 goroutine 盯着；CancelFunc 又是幂等的，重复撤销不会 panic。
+//
+// expires 是原子量：续期发生在任意一个请求的 goroutine 上，而 SSE 那条长连接同时在读它。
 type authSession struct {
-	expires time.Time
+	expires atomic.Int64 // UnixNano
 	ctx     context.Context
 	end     context.CancelFunc
+}
+
+func (s *authSession) deadline() time.Time { return time.Unix(0, s.expires.Load()) }
+
+// 到期时间往后推；返回是否真的推了。只在距上次续期够久时才动，省掉每个响应一次 Set-Cookie。
+func (s *authSession) renew(now time.Time, lifetime time.Duration) bool {
+	next := now.Add(lifetime)
+	current := s.expires.Load()
+	if next.Sub(time.Unix(0, current)) < sessionRenewAfter {
+		return false
+	}
+	return s.expires.CompareAndSwap(current, next.UnixNano())
 }
 
 type loginFailures struct {
@@ -137,7 +155,7 @@ func (a *passwordAuth) session(r *http.Request) *authSession {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 	session := a.sessions[key]
-	if session != nil && !a.now().Before(session.expires) {
+	if session != nil && !a.now().Before(session.deadline()) {
 		session.end()
 		delete(a.sessions, key)
 		return nil
@@ -164,16 +182,17 @@ func (a *passwordAuth) issue(w http.ResponseWriter, r *http.Request) error {
 	key := sha256.Sum256([]byte(token))
 	now := a.now()
 	sessionCtx, endSession := context.WithCancel(context.Background())
-	session := &authSession{expires: now.Add(a.lifetime), ctx: sessionCtx, end: endSession}
+	session := &authSession{ctx: sessionCtx, end: endSession}
+	session.expires.Store(now.Add(a.lifetime).UnixNano())
 	a.revoke(r)
 	a.mu.Lock()
 	var oldestKey [32]byte
 	var oldest *authSession
 	for candidate, existing := range a.sessions {
-		if !now.Before(existing.expires) {
+		if !now.Before(existing.deadline()) {
 			existing.end()
 			delete(a.sessions, candidate)
-		} else if oldest == nil || existing.expires.Before(oldest.expires) {
+		} else if oldest == nil || existing.deadline().Before(oldest.deadline()) {
 			oldestKey, oldest = candidate, existing
 		}
 	}
@@ -183,12 +202,16 @@ func (a *passwordAuth) issue(w http.ResponseWriter, r *http.Request) error {
 	}
 	a.sessions[key] = session
 	a.mu.Unlock()
+	a.writeSessionCookie(w, r, token, session.deadline())
+	return nil
+}
+
+func (a *passwordAuth) writeSessionCookie(w http.ResponseWriter, r *http.Request, token string, expires time.Time) {
 	http.SetCookie(w, &http.Cookie{
 		Name: sessionCookieName, Value: token, Path: "/",
 		HttpOnly: true, SameSite: http.SameSiteLaxMode, Secure: r.TLS != nil,
-		Expires: session.expires.UTC(), MaxAge: int(a.lifetime.Seconds()),
+		Expires: expires.UTC(), MaxAge: int(a.lifetime.Seconds()),
 	})
-	return nil
 }
 
 func clearSessionCookie(w http.ResponseWriter, r *http.Request) {
@@ -245,6 +268,11 @@ func (a *passwordAuth) protect(next http.Handler) http.Handler {
 				http.Redirect(w, r, "/login?next="+url.QueryEscape(safeLoginNext(r.URL.RequestURI())), http.StatusSeeOther)
 			}
 			return
+		}
+		// 滑动续期：还在用就不该到点被踢下去。整晚挂着看直播的手机原先会在第二天同一
+		// 时刻收到 auth-expired，得重新输口令。
+		if session.renew(a.now(), a.lifetime) {
+			a.writeSessionCookie(w, r, sessionToken(r), session.deadline())
 		}
 		if r.Method != http.MethodGet && r.Method != http.MethodHead && r.Method != http.MethodOptions && !sameOrigin(r) {
 			writeJSON(w, http.StatusForbidden, map[string]string{"error": "请求来源无效"})

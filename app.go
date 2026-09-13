@@ -10,6 +10,8 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"strconv"
+	"strings"
 	"sync"
 	"time"
 )
@@ -118,11 +120,15 @@ func (b *tokenBucket) allow(now time.Time, burst float64, interval time.Duration
 type eventHub struct {
 	mu sync.Mutex
 	// 构造后不变，frame() 因此无需持锁。
-	roomID      string
-	generation  string
-	resetFrame  []byte
-	status      Status
-	history     [][]byte
+	roomID     string
+	generation string
+	resetFrame []byte
+	status     Status
+	history    [][]byte
+	// history[i] 的序号恒为 historyBase+i，所以只存一个基准就够，不必给每帧配结构体。
+	// nextSeq 是下一条消息要用的号，编码失败时不消耗。
+	historyBase uint64
+	nextSeq     uint64
 	gifts       giftCatalog
 	giftRoomID  string
 	triggers    map[string]giftTrigger
@@ -144,23 +150,53 @@ func newHub(roomID, generation string) *eventHub {
 		subscribers: make(map[chan []byte]struct{}),
 	}
 	// 内容恒定，编一次供全部订阅者复用。
-	hub.resetFrame = hub.frame("reset", struct{}{})
+	hub.resetFrame = hub.frame("reset", "", struct{}{})
 	return hub
 }
 
 // 整条 SSE 帧，含信封。编码失败返回 nil，调用方跳过这一帧而不是断开订阅。
-func (h *eventHub) frame(name string, data any) []byte {
+// id 非空时写进 id: 行——浏览器会记住它，断线重连时用 Last-Event-ID 头带回来。
+// 只有消息帧带 id：状态帧与 reset 帧不该把续传点往前推。
+func (h *eventHub) frame(name, id string, data any) []byte {
 	payload, err := json.Marshal(roomEnvelope{RoomID: &h.roomID, Generation: &h.generation, Data: data})
 	if err != nil {
 		log.Printf("RID=%s 无法编码 %s 帧：%v", h.roomID, name, err)
 		return nil
 	}
-	frame := make([]byte, 0, len("event: \ndata: \n\n")+len(name)+len(payload))
+	frame := make([]byte, 0, len("event: \nid: \ndata: \n\n")+len(name)+len(id)+len(payload))
 	frame = append(frame, "event: "...)
 	frame = append(frame, name...)
+	if id != "" {
+		frame = append(frame, "\nid: "...)
+		frame = append(frame, id...)
+	}
 	frame = append(frame, "\ndata: "...)
 	frame = append(frame, payload...)
 	return append(frame, '\n', '\n')
+}
+
+// 续传点带上 generation：worker 被回收重建后序号从头开始，光凭序号会把新旧两段混起来。
+func (h *eventHub) eventID(seq uint64) string {
+	return h.generation + ":" + strconv.FormatUint(seq, 36)
+}
+
+// Last-Event-ID 对应的回放起点（history 下标）。generation 对不上、落后得比历史窗口还多、
+// 或者压根解析不出来，都退回全量回放——那正是加这个机制之前的行为。
+func (h *eventHub) replayFromLocked(lastEventID string) int {
+	generation, number, ok := strings.Cut(lastEventID, ":")
+	if !ok || generation != h.generation {
+		return 0
+	}
+	seen, err := strconv.ParseUint(number, 36, 64)
+	if err != nil || seen < h.historyBase {
+		return 0
+	}
+	offset := seen - h.historyBase + 1
+	if offset > uint64(len(h.history)) {
+		// 客户端报的比我们手上的还新，不重发。
+		return len(h.history)
+	}
+	return int(offset)
 }
 
 func (h *eventHub) ResetFrame() []byte { return h.resetFrame }
@@ -175,7 +211,7 @@ func (h *eventHub) syncReceivedLocked() {
 // wireStatus 不输出 Types/Events，所以这里不必先 snapshot 拷贝那两张表。
 func (h *eventHub) statusFrameLocked() []byte {
 	h.syncReceivedLocked()
-	return h.frame("status", wireStatus(h.status))
+	return h.frame("status", "", wireStatus(h.status))
 }
 
 func (h *eventHub) StatusFrame() []byte {
@@ -233,19 +269,6 @@ func (h *eventHub) Update(change func(*Status)) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	change(&h.status)
-	h.publishStatusLocked()
-}
-
-func (h *eventHub) Reset(input string) {
-	h.mu.Lock()
-	defer h.mu.Unlock()
-	h.status = Status{Phase: "resolving", Message: "正在查询真实房间号", Room: Room{Input: input}, Types: map[string]int64{}, Events: map[string]int64{}}
-	h.history = nil
-	h.lastReceived = time.Time{}
-	h.enter, h.diamond = tokenBucket{}, tokenBucket{}
-	clear(h.triggers)
-	// 保留上一份礼物目录；Packet 只认 RID 对得上的那份。
-	h.broadcastLocked(h.resetFrame)
 	h.publishStatusLocked()
 }
 
@@ -307,10 +330,12 @@ func (h *eventHub) Packet(fields map[string]string, roomID string) {
 		event.Index = h.status.Events[event.Kind]
 		// 历史存编好的帧而不是 Event：回放不必逐条重编，一条 chatmsg 也从 ~1 KB 的
 		// 全量 Fields 降到投影后的帧长。
-		if frame := h.frame("message", wireEvent(event)); frame != nil {
+		if frame := h.frame("message", h.eventID(h.nextSeq), wireEvent(event)); frame != nil {
+			h.nextSeq++
 			if len(h.history) == historyLimit {
 				copy(h.history, h.history[1:])
 				h.history = h.history[:historyLimit-1]
+				h.historyBase++
 			}
 			h.history = append(h.history, frame)
 			h.broadcastLocked(frame)
@@ -321,7 +346,8 @@ func (h *eventHub) Packet(fields map[string]string, roomID string) {
 	}
 }
 
-func (h *eventHub) Subscribe() ([]byte, [][]byte, chan []byte) {
+// lastEventID 来自浏览器重连时自动带的 Last-Event-ID 头；为空就是全新连接，全量回放。
+func (h *eventHub) Subscribe(lastEventID string) ([]byte, [][]byte, chan []byte) {
 	h.mu.Lock()
 	defer h.mu.Unlock()
 	channel := make(chan []byte, subscriberQueue)
@@ -331,7 +357,8 @@ func (h *eventHub) Subscribe() ([]byte, [][]byte, chan []byte) {
 		h.subscribers[channel] = struct{}{}
 	}
 	// 帧只读，与仍在历史里的那份共享底层数组。
-	return h.statusFrameLocked(), append([][]byte(nil), h.history...), channel
+	pending := h.history[h.replayFromLocked(lastEventID):]
+	return h.statusFrameLocked(), append([][]byte(nil), pending...), channel
 }
 
 func (h *eventHub) IsSubscribed(channel chan []byte) bool {
@@ -466,13 +493,13 @@ func (a *application) sessionExpired(session *authSession) bool {
 	if cancelled(session.ctx) {
 		return true
 	}
-	return !a.auth.now().Before(session.expires)
+	return !a.auth.now().Before(session.deadline())
 }
 
 // 会话到期时解析也要停。AfterFunc 不起 goroutine，会话撤销直接连到这次请求的取消上。
 func (a *application) roomRequestContext(r *http.Request) (context.Context, func()) {
 	session := r.Context().Value(authSessionKey{}).(*authSession)
-	ctx, cancel := context.WithTimeout(r.Context(), session.expires.Sub(a.auth.now()))
+	ctx, cancel := context.WithTimeout(r.Context(), session.deadline().Sub(a.auth.now()))
 	stop := context.AfterFunc(session.ctx, cancel)
 	return ctx, func() { stop(); cancel() }
 }
@@ -520,7 +547,8 @@ func (a *application) stream(w http.ResponseWriter, r *http.Request) {
 		return controller.Flush() == nil
 	}
 	endSession := func() { send("auth-expired", struct{}{}) }
-	subscription, err := a.rooms.Subscribe(ctx, input)
+	// 浏览器重连会带上它，服务端据此只补客户端真正漏掉的那几条，而不是又推 300 条。
+	subscription, err := a.rooms.Subscribe(ctx, input, r.Header.Get("Last-Event-ID"))
 	if err != nil {
 		if a.sessionExpired(session) {
 			endSession()

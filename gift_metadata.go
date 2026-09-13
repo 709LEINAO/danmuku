@@ -388,7 +388,13 @@ func fetchGiftRows(ctx context.Context, endpoint string, client *http.Client) ([
 	return parseGiftRows(io.LimitReader(response.Body, 2<<20))
 }
 
-func fetchGiftCatalog(ctx context.Context, roomID string, client *http.Client, props *propCatalogStore, lead func(context.Context) (context.Context, func())) (giftCatalog, error) {
+// publish 在房间目录到手、还没等到全站道具表时先发一版。开房那几秒到的礼物原先一律
+// 拿不到参考价——而且不会回头重算，帧早就编码发出去了，那几笔钱就永久漏在合计之外。
+//
+// 先发的是房间目录而不是随便哪个源：它本来就是优先级最高的那层，所以早到的礼物拿到的
+// 就是最终价，不会出现「先便宜后变贵」的跳动。道具表随后补上只在全站表里的那些（钻粉卡
+// 一类），而它是进程内共享缓存，只有进程起来后开的第一个房间才真的要等它下载。
+func fetchGiftCatalog(ctx context.Context, roomID string, client *http.Client, props *propCatalogStore, lead func(context.Context) (context.Context, func()), publish func(giftCatalog)) (giftCatalog, error) {
 	query := url.Values{"rid": {roomID}}.Encode()
 	endpoints := []string{
 		"https://gift.douyucdn.cn/api/gift/v2/web/list?" + query,
@@ -427,12 +433,18 @@ func fetchGiftCatalog(ctx context.Context, roomID string, client *http.Client, p
 			failures = append(failures, fmt.Errorf("%s: %w", endpoints[response.index], response.err))
 		}
 	}
+	legacy, legacyErr := catalogFromGiftRows(rows[0], "douyu-room-catalog")
+	v5, v5Err := catalogFromGiftRows(mergeV5GiftRows(rows[1], rows[2]), "douyu-room-catalog-v5")
+	rooms := legacy.supplement(v5)
+	// 三个 rid 接口都是小响应（各 5 秒时限），道具表是 1.4 MB（30 秒）。房间目录一齐就先发，
+	// 不陪着最慢的那个等。
+	if len(rooms) > 0 && publish != nil {
+		publish(rooms)
+	}
 	prop := <-propResults
 	if prop.err != nil {
 		failures = append(failures, fmt.Errorf("%s: %w", propConfigEndpoint, prop.err))
 	}
-	legacy, legacyErr := catalogFromGiftRows(rows[0], "douyu-room-catalog")
-	v5, v5Err := catalogFromGiftRows(mergeV5GiftRows(rows[1], rows[2]), "douyu-room-catalog-v5")
 	// 道具配置垫底，房间目录永远优先。
-	return prop.catalog.supplement(legacy.supplement(v5)), errors.Join(append(failures, legacyErr, v5Err)...)
+	return prop.catalog.supplement(rooms), errors.Join(append(failures, legacyErr, v5Err)...)
 }
